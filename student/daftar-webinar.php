@@ -15,13 +15,16 @@ $kategori_filter = isset($_GET['kategori']) ? clean_input($_GET['kategori']) : '
 $search = isset($_GET['search']) ? clean_input($_GET['search']) : '';
 
 // Query dasar (Disesuaikan dengan tabel Anda)
+// Query dasar yang lebih aman untuk testing
 $query = "SELECT w.*, 
           (SELECT COUNT(*) FROM pemantauan_webinar p 
            WHERE p.id_webinar = w.id_webinar AND p.status_pendaftaran = 'disetujui') as peserta_terdaftar
           FROM webinar w 
           WHERE w.status = 'publish' 
-          AND w.status_verifikasi = 'disetujui'
-          AND w.tanggal >= CURDATE()";
+          AND w.status_verifikasi = 'disetujui'";
+          
+// Hapus atau komentari baris di bawah ini jika ingin mengetes webinar yang tanggalnya sudah lewat
+// AND w.tanggal >= CURDATE()
 
 if (!empty($kategori_filter)) $query .= " AND w.kategori = '$kategori_filter'";
 if (!empty($search)) $query .= " AND (w.judul LIKE '%$search%' OR w.pembicara LIKE '%$search%')";
@@ -36,8 +39,7 @@ $kategori_result = mysqli_query($conn, "SELECT DISTINCT kategori FROM webinar WH
 <div class="space-y-8">
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-            <h2 class="text-3xl font-black text-slate-800 tracking-tight italic uppercase">Eksplorasi Webinar</h2>
-            <p class="text-slate-500 font-medium">Temukan topik menarik dan kumpulkan poin SKKM Anda.</p>
+            <h2 class="text-3xl font-black text-slate-800 tracking-tight uppercase">Daftar Webinar</h2>
         </div>
         
         <form method="GET" class="relative group w-full md:w-80">
@@ -115,23 +117,33 @@ $kategori_result = mysqli_query($conn, "SELECT DISTINCT kategori FROM webinar WH
                     </div>
 
                     <div class="flex flex-col gap-2 pt-2">
-                        <?php if(!$is_open): ?>
+                        <?php 
+                        $today = date('Y-m-d H:i:s');
+                        
+                        if ($today < $webinar['tanggal_mulai_pendaftaran']): ?>
                             <div class="w-full py-3 bg-amber-50 text-amber-600 text-xs font-black uppercase text-center rounded-xl border border-amber-100">
                                 <i class="fas fa-lock mr-2"></i> Pendaftaran Belum Dibuka
                             </div>
-                        <?php elseif($is_full): ?>
+
+                        <?php elseif ($today > $webinar['tanggal_akhir_pendaftaran']): ?>
+                            <div class="w-full py-3 bg-rose-50 text-rose-600 text-xs font-black uppercase text-center rounded-xl border border-rose-100">
+                                <i class="fas fa-calendar-times mr-2"></i> Pendaftaran Ditutup
+                            </div>
+
+                        <?php elseif ($is_full): ?>
                             <div class="w-full py-3 bg-rose-50 text-rose-600 text-xs font-black uppercase text-center rounded-xl border border-rose-100">
                                 <i class="fas fa-times-circle mr-2"></i> Kuota Sudah Penuh
                             </div>
+
                         <?php else: ?>
                             <a href="detail-webinar.php?id=<?= $webinar['id_webinar'] ?>&daftar=true" 
-                               class="w-full py-3 bg-teal-600 text-white font-bold rounded-xl text-center hover:bg-teal-700 transition-all shadow-lg shadow-teal-100">
+                            class="w-full py-3 bg-teal-600 text-white font-bold rounded-xl text-center hover:bg-teal-700 transition-all shadow-lg shadow-teal-100">
                                 Daftar Sekarang
                             </a>
                         <?php endif; ?>
                         
                         <a href="detail-webinar.php?id=<?= $webinar['id_webinar'] ?>" 
-                           class="w-full py-3 bg-white border border-slate-200 text-slate-600 font-bold rounded-xl text-center hover:bg-slate-50 transition-all text-sm">
+                        class="w-full py-3 bg-white border border-slate-200 text-slate-600 font-bold rounded-xl text-center hover:bg-slate-50 transition-all text-sm">
                             Lihat Detail
                         </a>
                     </div>

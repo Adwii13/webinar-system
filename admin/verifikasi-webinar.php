@@ -46,7 +46,7 @@ $result_webinars = mysqli_stmt_get_result($stmt);
             </div>
         <?php endif; ?>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
             <a href="?status=menunggu" class="bg-white p-6 rounded-3xl border-2 <?= $status == 'menunggu' ? 'border-amber-500 shadow-lg shadow-amber-100' : 'border-transparent shadow-sm' ?> transition-all">
                 <p class="text-xs font-black text-amber-600 uppercase mb-1">Menunggu</p>
                 <h3 class="text-3xl font-black text-slate-800"><?= $stats['menunggu'] ?></h3>

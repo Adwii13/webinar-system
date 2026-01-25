@@ -25,19 +25,22 @@ if (session_status() === PHP_SESSION_NONE) {
 <body class="h-full" onload="document.body.classList.add('loaded')">
     <div class="flex min-h-screen">
         
-        <aside class="w-64 bg-teal-600 text-white fixed h-full z-50 flex flex-col shadow-xl">
+        <aside id="sidebar" class="fixed inset-y-0 left-0 w-64 bg-teal-600 text-white transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out z-50 flex flex-col shadow-xl">
             <div class="p-8">
+                <button onclick="toggleSidebar()" class="md:hidden absolute top-5 right-5 text-white/70 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+
                 <div class="mb-2">
                     <h1 class="text-2xl font-black tracking-tighter text-white">UNIBI</h1>
                 </div>
-                <p class="text-teal-100 text-[10px] font-bold uppercase tracking-[0.2em] mb-10 opacity-80">Student Portal</p>
+                <p class="text-teal-100 text-[10px] font-bold uppercase tracking-[0.2em] mb-10 opacity-80">Portal Mahasiswa</p>
                 
                 <nav class="space-y-1.5">
                     <?php 
                     $current_page = basename($_SERVER['PHP_SELF']);
-                    // Menu Khusus Mahasiswa
                     $menus = [
-                        ['index.php', 'fas fa-tachometer-alt', 'Dashboard Saya'],
+                        ['index.php', 'fa-solid fa-house', 'Dashboard'],
                         ['daftar-webinar.php', 'fas fa-search', 'Cari Webinar'],
                         ['riwayat.php', 'fas fa-history', 'Riwayat Webinar'],
                     ];
@@ -55,12 +58,12 @@ if (session_status() === PHP_SESSION_NONE) {
                         </a>
                     <?php endforeach; ?>
 
-                    <div class="pt-6 border-t border-teal-500/50 mt-6">
+                    <!-- <div class="pt-6 border-t border-teal-500/50 mt-6">
                         <a href="../admin/dashboard.php" class="flex items-center gap-3 px-4 py-3 rounded-xl text-teal-100 hover:bg-white hover:text-teal-600 transition-all font-bold border border-teal-400/30">
                             <i class="fas fa-user-shield w-5 text-sm"></i>
                             <span class="text-sm">Panel Admin</span>
                         </a>
-                    </div>
+                    </div> -->
                 </nav>
             </div>
 
@@ -71,14 +74,23 @@ if (session_status() === PHP_SESSION_NONE) {
                     </div>
                     <div class="overflow-hidden">
                         <p class="text-sm font-bold text-white truncate">Mahasiswa UNIBI</p>
-                        <p class="text-[10px] text-teal-100 font-semibold uppercase tracking-wider opacity-80">Verified Account</p>
+                        <p class="text-[10px] text-teal-100 font-semibold uppercase tracking-wider opacity-80">NPM</p>
                     </div>
                 </div>
             </div>
         </aside>
 
-        <main class="flex-1 ml-64 min-w-0 bg-slate-50">
-            <div class="p-8 pb-0">
+        <div id="overlay" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden"></div>
+
+        <main class="flex-1 ml-0 md:ml-64 min-w-0 bg-slate-50 transition-all duration-300">
+            <div class="md:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-30">
+                <h1 class="font-black text-teal-600 tracking-tighter">UNIBI</h1>
+                <button onclick="toggleSidebar()" class="p-2 bg-slate-50 rounded-lg text-slate-600">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+
+            <div class="p-4 md:p-8 pb-0">
                  <?php if (isset($_SESSION['success'])): ?>
                     <div class="bg-emerald-100 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl mb-6 flex justify-between items-center">
                         <div class="flex items-center gap-2">

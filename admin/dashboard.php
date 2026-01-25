@@ -27,7 +27,7 @@ $result_webinars = mysqli_query($conn, $query_webinars);
 ?>
 
 <div class="p-8 bg-slate-50 min-h-screen">
-    <div class="flex justify-end items-center mb-6">
+    <!-- <div class="flex justify-end items-center mb-6">
         <div class="flex items-center gap-3 bg-white p-2 pr-4 rounded-2xl shadow-sm border border-slate-100">
             <img src="https://ui-avatars.com/api/?name=Bayu+Anggara&background=0D9488&color=fff" class="w-10 h-10 rounded-xl" alt="Profile">
             <div class="text-left">
@@ -35,7 +35,7 @@ $result_webinars = mysqli_query($conn, $query_webinars);
                 <p class="text-[11px] text-slate-400 font-medium">Administrator</p>
             </div>
         </div>
-    </div>
+    </div> -->
 
     <div class="bg-teal-600 rounded-[32px] p-10 text-white mb-10 shadow-lg shadow-teal-900/10 relative overflow-hidden">
         <div class="relative z-10">
@@ -84,7 +84,7 @@ $result_webinars = mysqli_query($conn, $query_webinars);
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         <div class="lg:col-span-2">
             <div class="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
                 <div class="p-8 border-b border-slate-50 flex justify-between items-center">

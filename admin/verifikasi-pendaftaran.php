@@ -33,8 +33,8 @@ $count_rejected = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as tot
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            <div class="bg-white p-6 rounded-[24px] border border-orange-100 shadow-sm relative overflow-hidden group">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+            <div class="bg-white p-6 rounded-[24px] border border-orange-100 shadow-sm relative overflow-hidden">
                 <div class="absolute -right-4 -top-4 w-24 h-24 bg-orange-50 rounded-full group-hover:scale-110 transition-transform"></div>
                 <p class="text-orange-600 font-black uppercase tracking-wider text-xs mb-1 relative">Menunggu</p>
                 <h3 class="text-4xl font-black text-slate-800 relative"><?= number_format($count_waiting) ?></h3>
@@ -65,28 +65,38 @@ $count_rejected = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as tot
         <div class="space-y-4">
             <?php if(mysqli_num_rows($result) > 0): ?>
                 <?php while($pendaftaran = mysqli_fetch_assoc($result)): ?>
-                <div class="bg-white p-6 rounded-[32px] shadow-sm border border-slate-100 hover:border-teal-500/30 transition-all group">
-                    <div class="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                        <div class="flex gap-5">
-                            <div class="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 text-xl shrink-0 group-hover:bg-teal-600 group-hover:text-white transition-all">
+                <div class="bg-white p-5 md:p-6 rounded-[28px] md:rounded-[32px] shadow-sm border border-slate-100 hover:border-teal-500/30 transition-all group">
+                    <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+
+                        <div class="flex flex-col sm:flex-row gap-4 md:gap-5">
+                            <div class="w-12 h-12 md:w-14 md:h-14 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 text-lg md:text-xl shrink-0 group-hover:bg-teal-600 group-hover:text-white transition-all">
                                 <i class="fas fa-user-graduate"></i>
                             </div>
                             
-                            <div>
-                                <h4 class="text-xl font-bold text-slate-800"><?= htmlspecialchars($pendaftaran['nama_mahasiswa']) ?></h4>
-                                <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-slate-500 font-medium">
-                                    <span><i class="fas fa-id-badge mr-1 text-teal-500"></i> <?= htmlspecialchars($pendaftaran['npp']) ?></span>
-                                    <span><i class="fas fa-university mr-1 text-teal-500"></i> <?= htmlspecialchars($pendaftaran['fakultas']) ?></span>
-                                    <span><i class="fas fa-calendar-alt mr-1 text-teal-500"></i> <?= date('d/m/Y', strtotime($pendaftaran['tanggal_daftar'])) ?></span>
+                            <div class="min-w-0 flex-1">
+                                <h4 class="text-lg md:text-xl font-bold text-slate-800 truncate"><?= htmlspecialchars($pendaftaran['nama_mahasiswa']) ?></h4>
+                                <div class="flex flex-wrap gap-x-3 gap-y-2 mt-2 text-[11px] md:text-sm text-slate-500 font-medium">
+                                    <span class="bg-slate-50 px-2 py-1 rounded-md border border-slate-100"></span><i class="fas fa-id-badge mr-1 text-teal-500"></i> <?= htmlspecialchars($pendaftaran['npp']) ?></span>
+                                    <span class="bg-slate-50 px-2 py-1 rounded-md border border-slate-100"></span><i class="fas fa-university mr-1 text-teal-500"></i> <?= htmlspecialchars($pendaftaran['fakultas']) ?></span>
+                                    <span class="bg-slate-50 px-2 py-1 rounded-md border border-slate-100"></span><i class="fas fa-calendar-alt mr-1 text-teal-500"></i> <?= date('d/m/Y', strtotime($pendaftaran['tanggal_daftar'])) ?></span>
                                 </div>
                                 
                                 <div class="mt-4 p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Webinar Target</p>
-                                    <p class="text-slate-700 font-bold"><?= htmlspecialchars($pendaftaran['judul']) ?></p>
+                                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Webinar Target</p>
+                                    <p class="text-sm md:text-base text-slate-700 font-bold leading-tight"><?= htmlspecialchars($pendaftaran['judul']) ?></p>
                                     <p class="text-xs text-slate-500 mt-2 italic font-medium leading-relaxed">
                                         <i class="fas fa-quote-left mr-1 text-slate-300"></i> 
                                         <?= htmlspecialchars($pendaftaran['motivasi']) ?>
                                     </p>
+
+                                    <?php if(!empty($pendaftaran['bukti_bayar'])): ?>
+                                    <div class="mt-3">
+                                        <button onclick="viewImage('../assets/img/qr/<?= $pendaftaran['bukti_bayar'] ?>')" 
+                                                class="text-xs font-bold text-teal-600 hover:text-teal-700 flex items-center gap-1 bg-white px-3 py-1.5 rounded-lg border border-teal-100 shadow-sm transition-all">
+                                            <i class="fas fa-image"></i> LIHAT BUKTI BAYAR
+                                        </button>
+                                    </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -117,7 +127,19 @@ $count_rejected = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as tot
     </div>
 </div>
 
+<div id="modalPreview" class="fixed inset-0 bg-slate-900/80 hidden z-50 flex items-center justify-center p-4 backdrop-blur-sm" onclick="this.classList.add('hidden')">
+    <div class="max-w-xl w-full bg-white rounded-3xl p-2 shadow-2xl" onclick="event.stopPropagation()">
+        <img id="imgSource" src="" class="w-full h-auto rounded-2xl" alt="Bukti Transfer">
+        <button onclick="document.getElementById('modalPreview').classList.add('hidden')" class="w-full py-3 text-slate-500 font-bold text-sm">Tutup Preview</button>
+    </div>
+</div>
+
 <script>
+function viewImage(path) {
+    document.getElementById('imgSource').src = path;
+    document.getElementById('modalPreview').classList.remove('hidden');
+}
+
 function approveRegistration(id) {
     if (confirm('Konfirmasi Setujui: Berikan akses webinar kepada mahasiswa ini?')) {
         window.location.href = 'proses-aksi.php?action=approve_registration&id=' + id;

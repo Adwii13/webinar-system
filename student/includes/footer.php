@@ -3,21 +3,32 @@
                 <div class="text-slate-500 text-sm font-medium">
                     &copy; 2026 UNIBI - University E-Learning Platform
                 </div>
-                <button onclick="switchView()" class="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-teal-600 hover:text-white transition-all text-sm">
+                <!-- <button onclick="switchView()" class="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-lg hover:bg-teal-600 hover:text-white transition-all text-sm">
                     <i class="fas fa-user-shield text-xs"></i>
                     Switch to Admin View
-                </button>
+                </button> -->
             </div>
         </footer>
 
-    </main> </div> <script>
+    </main> </div> 
+<script>
 /**
  * Fungsi untuk berpindah kembali ke dashboard admin
  */
-function switchView() {
-    if (confirm('Beralih ke Panel Admin?')) {
-        window.location.href = '../admin/dashboard.php';
-    }
+// function switchView() {
+//     if (confirm('Beralih ke Panel Admin?')) {
+//         window.location.href = '../admin/dashboard.php';
+//     }
+// }
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+    
+    // Toggle class translate-x-0 untuk buka sidebar
+    sidebar.classList.toggle('-translate-x-full');
+    // Toggle overlay
+    overlay.classList.toggle('hidden');
 }
 
 /**

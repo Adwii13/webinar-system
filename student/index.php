@@ -15,7 +15,7 @@ $result_webinar = mysqli_query($conn, $query_webinar);
 
 <div class="space-y-8">
     
-<div class="relative overflow-hidden bg-teal-600 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-teal-900/10">
+<div class="relative overflow-hidden bg-teal-600 rounded-3xl p-6 md:p-8 text-white shadow-xl shadow-teal-900/10 max-w-4xl mx-auto">
         <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
             <div class="max-w-xl text-center md:text-left">
                 <h1 class="text-2xl md:text-3xl font-black mb-2 leading-tight tracking-tight">
@@ -44,7 +44,7 @@ $result_webinar = mysqli_query($conn, $query_webinar);
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-5">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-5 ">
             <div class="w-14 h-14 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center text-2xl shadow-sm">
                 <i class="fas fa-calendar-check"></i>
             </div>
@@ -85,7 +85,7 @@ $result_webinar = mysqli_query($conn, $query_webinar);
     <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
             <div>
-                <h3 class="text-xl font-bold text-slate-800 italic uppercase">Webinar Terbaru</h3>
+                <h3 class="text-xl font-bold text-slate-800 uppercase">Webinar Terbaru</h3>
                 <p class="text-sm text-slate-500 font-medium">Jangan lewatkan kesempatan belajar langsung</p>
             </div>
             <a href="daftar-webinar.php" class="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold rounded-xl text-sm hover:bg-teal-600 hover:text-white transition-all shadow-sm">Lihat Semua</a>

@@ -55,7 +55,7 @@ $persentase = ($total_peserta / $webinar['kuota_peserta']) * 100;
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         <div class="lg:col-span-2 space-y-8">
             <div class="bg-white rounded-[32px] shadow-sm border border-slate-100 overflow-hidden">
                 <div class="p-8">
@@ -123,6 +123,20 @@ $persentase = ($total_peserta / $webinar['kuota_peserta']) * 100;
                                     <p class="text-[10px] font-bold text-slate-400 uppercase">Platform Media</p>
                                     <p class="text-slate-800 font-bold"><?= htmlspecialchars($webinar['platform']); ?></p>
                                 </div>
+                            </div>
+
+                            <div class="mt-4 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl">
+                                <label class="block text-xs font-bold text-emerald-600 uppercase mb-1">WhatsApp Group Link</label>
+                                <?php if (!empty($webinar['link_group'])): ?>
+                                    <div class="flex items-center gap-2">
+                                        <i class="fab fa-whatsapp text-emerald-500 text-lg"></i>
+                                        <a href="<?= $webinar['link_group'] ?>" target="_blank" class="text-sm font-semibold text-slate-700 hover:text-emerald-600 underline break-all">
+                                            <?= $webinar['link_group'] ?>
+                                        </a>
+                                    </div>
+                                <?php else: ?>
+                                    <p class="text-sm text-slate-400 italic">Link grup belum ditambahkan</p>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

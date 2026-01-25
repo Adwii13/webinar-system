@@ -5,7 +5,7 @@ require_once 'includes/header.php';
 // Ambil filter status dari URL jika ada
 $status_filter = isset($_GET['status']) ? mysqli_real_escape_string($conn, $_GET['status']) : '';
 
-$query_str = "SELECT p.*, w.judul, w.tanggal, w.pembicara, w.kategori, w.poin_skkm, w.platform
+$query_str = "SELECT p.*, w.judul, w.tanggal, w.pembicara, w.kategori, w.poin_skkm, w.platform, w.link_group
               FROM pemantauan_webinar p 
               JOIN webinar w ON p.id_webinar = w.id_webinar";
 
@@ -96,14 +96,39 @@ $total_poin = mysqli_fetch_assoc($poin_query)['total_poin'] ?? 0;
                         </div>
 
                         <div class="flex items-center md:justify-end gap-3 border-t md:border-t-0 pt-4 md:pt-0">
-                            <a href="detail-webinar.php?id=<?= $p['id_webinar'] ?>" 
-                               class="flex-1 md:flex-none px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-xs uppercase tracking-widest transition-all text-center">
-                                Detail
+                            <?php 
+                                if($p['status_pendaftaran'] == 'menunggu') {
+                                    // Arahkan ke detail-webinar dengan mode daftar dan membawa ID pendaftaran yang akan diedit
+                                    $link_tujuan = "detail-webinar.php?id=" . $p['id_webinar'] . "&daftar=true&edit_id=" . $p['id_pendaftaran'];
+                                    $label_tombol = "Edit Pendaftaran";
+                                    $bg_color = "bg-amber-100 text-amber-700 hover:bg-amber-200";
+                                } else {
+                                // Jika disetujui atau ditolak, arahkan ke Ringkasan (Read Only)
+                                $link_tujuan = "ringkasan-pendaftaran.php?id=" . $p['id_pendaftaran'];
+                                $label_tombol = "Lihat Detail";
+                                $bg_color = "bg-slate-100 text-slate-700 hover:bg-slate-200";
+                            }
+                            ?>
+
+                            <a href="<?= $link_tujuan ?>" 
+                            class="flex-1 md:flex-none px-6 py-3 <?= $bg_color ?> rounded-xl font-black text-xs uppercase tracking-widest transition-all text-center">
+                                <?= $label_tombol ?>
                             </a>
+
                             <?php if($p['status_pendaftaran'] == 'disetujui'): ?>
-                            <button class="flex-1 md:flex-none px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-teal-200 transition-all text-center">
-                                <i class="fas fa-ticket-alt mr-2"></i> Tiket
-                            </button>
+                                <?php if(!empty($p['link_group'])): ?>
+                                    <a href="<?= $p['link_group'] ?>" 
+                                    target="_blank"
+                                    class="flex-1 md:flex-none px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-black text-[10px] md:text-xs uppercase tracking-widest shadow-lg shadow-emerald-200 transition-all text-center flex items-center justify-center gap-2">
+                                        <i class="fab fa-whatsapp text-sm md:text-base"></i>
+                                        <span>Grup WhatsApp</span>
+                                    </a>
+                                <?php else: ?>
+                                    <button disabled 
+                                            class="flex-1 md:flex-none px-6 py-3 bg-slate-200 text-slate-400 rounded-xl font-black text-[10px] md:text-xs uppercase tracking-widest cursor-not-allowed text-center">
+                                        Link Belum Tersedia
+                                    </button>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>

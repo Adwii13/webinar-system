@@ -2,6 +2,22 @@
 require_once '../config/database.php';
 require_once 'includes/header.php';
 
+// LOGIKA BARU: Cek apakah ini mode EDIT
+$is_edit_mode = false;
+$data_lama = [];
+
+if (isset($_GET['edit_id'])) {
+    $id_edit = mysqli_real_escape_string($conn, $_GET['edit_id']);
+    
+    // Ambil data pendaftaran yang sudah ada
+    $query_lama = mysqli_query($conn, "SELECT * FROM pemantauan_webinar WHERE id_pendaftaran = '$id_edit'");
+    
+    if (mysqli_num_rows($query_lama) > 0) {
+        $is_edit_mode = true;
+        $data_lama = mysqli_fetch_assoc($query_lama);
+    }
+}
+
 // Ambil filter status dari URL jika ada
 $status_filter = isset($_GET['status']) ? mysqli_real_escape_string($conn, $_GET['status']) : '';
 
@@ -58,6 +74,12 @@ $total_poin = mysqli_fetch_assoc($poin_query)['total_poin'] ?? 0;
             <a href="riwayat.php?status=menunggu" class="px-6 py-2 rounded-full font-bold text-sm transition-all <?= $status_filter == 'menunggu' ? 'bg-amber-500 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200 hover:border-amber-200' ?>">Menunggu</a>
             <a href="riwayat.php?status=ditolak" class="px-6 py-2 rounded-full font-bold text-sm transition-all <?= $status_filter == 'ditolak' ? 'bg-rose-500 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200 hover:border-rose-200' ?>">Ditolak</a>
         </div>
+
+        <?php if(isset($_SESSION['success'])): ?>
+            <div class="alert alert-success">
+                <?= $_SESSION['success']; unset($_SESSION['success']); ?>
+            </div>
+        <?php endif; ?>
 
         <div class="grid gap-4">
             <?php if(mysqli_num_rows($result) > 0): ?>

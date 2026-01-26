@@ -21,13 +21,13 @@
         <div class="absolute -top-24 -left-24 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
         <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-teal-400/20 rounded-full blur-3xl"></div>
 
-        <div class="glass-effect p-10 md:p-14 rounded-[40px] shadow-2xl text-center max-w-lg w-full transform transition-all relative z-10 border border-white/20">
+        <div class="glass-effect p-10 md:p-4 rounded-[40px] shadow-2xl text-center max-w-lg w-full transform transition-all relative z-10 border border-white/20">
             
             <div class="w-24 h-24 bg-teal-50 text-teal-600 rounded-3xl flex items-center justify-center text-4xl mx-auto mb-8 shadow-inner">
                 <i class="fas fa-video"></i>
             </div>
             
-            <h1 class="text-3xl md:text-4xl font-black text-slate-800 mb-3 tracking-tight italic uppercase">
+            <h1 class="text-3xl md:text-4xl font-black text-slate-800 mb-3 tracking-tight uppercase">
                 UNIBI <span class="text-teal-600">Webinar</span>
             </h1>
             

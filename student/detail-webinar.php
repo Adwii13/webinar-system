@@ -13,6 +13,29 @@ if (!isset($_GET['id'])) {
 
 $id = intval($_GET['id']);
 
+// --- LOGIKA AMBIL DATA EDIT (TAMBAHKAN INI) ---
+$is_edit_mode = false;
+$data_lama = [
+    'npp' => '',
+    'nama_mahasiswa' => '',
+    'fakultas' => '',
+    'jurusan' => '',
+    'motivasi' => ''
+];
+
+if (isset($_GET['edit_id'])) {
+    $id_edit = intval($_GET['edit_id']);
+    // Join dengan mahasiswa untuk ambil data profil lengkapnya
+    $q_edit = mysqli_query($conn, "SELECT p.*, m.nama_mahasiswa, m.fakultas, m.jurusan 
+                                   FROM pemantauan_webinar p 
+                                   JOIN mahasiswa m ON p.npp = m.npp 
+                                   WHERE p.id_pendaftaran = $id_edit");
+    if ($row_edit = mysqli_fetch_assoc($q_edit)) {
+        $is_edit_mode = true;
+        $data_lama = $row_edit;
+    }
+}
+
 // --- AMBIL DATA WEBINAR UNTUK TAMPILAN ---
 $query = "SELECT w.*, 
           (SELECT COUNT(*) FROM pemantauan_webinar p 
@@ -34,60 +57,78 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['btn_daftar'])) {
     $fakultas = mysqli_real_escape_string($conn, $_POST['fakultas']);
     $jurusan = mysqli_real_escape_string($conn, $_POST['jurusan']);
     $motivasi = mysqli_real_escape_string($conn, $_POST['motivasi']);
-    
-    // 1. Cek apakah sudah pernah mendaftar
-    $check = mysqli_query($conn, "SELECT id_pendaftaran FROM pemantauan_webinar WHERE id_webinar = $id AND npp = '$npp'");
-    
-    if (mysqli_num_rows($check) > 0) {
-        $_SESSION['error'] = "Anda sudah terdaftar di webinar ini!";
-    } else {
-        $bukti_bayar = "";
-        $upload_ok = true;
+    $mode = $_POST['mode'];
 
-        // 2. Logika upload jika berbayar
-        if ($webinar['tipe_webinar'] == 'berbayar') {
-            if (isset($_FILES['bukti_bayar']) && $_FILES['bukti_bayar']['error'] == 0) {
-                $target_dir = "../assets/img/qr/";
-                if (!is_dir($target_dir)) mkdir($target_dir, 0777, true);
-                
-                $file_ext = pathinfo($_FILES["bukti_bayar"]["name"], PATHINFO_EXTENSION);
-                $new_filename = "BAYAR_" . $npp . "_" . time() . "." . $file_ext;
-                $target_file = $target_dir . $new_filename;
+    $upload_ok = true;
+    $bukti_bayar = "";
 
-                if (getimagesize($_FILES["bukti_bayar"]["tmp_name"])) {
-                    if (!move_uploaded_file($_FILES["bukti_bayar"]["tmp_name"], $target_file)) {
-                        $upload_ok = false;
-                        $_SESSION['error'] = "Gagal mengunggah bukti pembayaran.";
-                    } else {
-                        $bukti_bayar = $new_filename;
-                    }
-                } else {
+    // 1. Validasi: Jika bukan mode edit, cek apakah NPP sudah terdaftar di webinar ini
+    if ($mode !== 'update') {
+        $check = mysqli_query($conn, "SELECT id_pendaftaran FROM pemantauan_webinar WHERE id_webinar = $id AND npp = '$npp'");
+        if (mysqli_num_rows($check) > 0) {
+            $_SESSION['error'] = "Anda sudah terdaftar di webinar ini!";
+            $upload_ok = false;
+        }
+    }
+
+    // 2. Logika upload jika berbayar
+    if ($upload_ok && $webinar['tipe_webinar'] == 'berbayar') {
+        if (isset($_FILES['bukti_bayar']) && $_FILES['bukti_bayar']['error'] == 0) {
+            $target_dir = "../assets/img/qr/";
+            if (!is_dir($target_dir)) mkdir($target_dir, 0777, true);
+            
+            $file_ext = pathinfo($_FILES["bukti_bayar"]["name"], PATHINFO_EXTENSION);
+            $new_filename = "BAYAR_" . $npp . "_" . time() . "." . $file_ext;
+            $target_file = $target_dir . $new_filename;
+
+            if (getimagesize($_FILES["bukti_bayar"]["tmp_name"])) {
+                if (!move_uploaded_file($_FILES["bukti_bayar"]["tmp_name"], $target_file)) {
                     $upload_ok = false;
-                    $_SESSION['error'] = "File bukan gambar valid.";
+                    $_SESSION['error'] = "Gagal mengunggah bukti pembayaran.";
+                } else {
+                    $bukti_bayar = $new_filename;
                 }
             } else {
                 $upload_ok = false;
-                $_SESSION['error'] = "Bukti pembayaran wajib diunggah.";
+                $_SESSION['error'] = "File bukan gambar valid.";
             }
+        } elseif ($mode !== 'update') { 
+            // Jika pendaftaran baru tapi tidak upload
+            $upload_ok = false;
+            $_SESSION['error'] = "Bukti pembayaran wajib diunggah.";
+        }
+    }
+
+    // 3. Eksekusi Simpan Jika Validasi & Upload OK
+    if ($upload_ok) {
+        // A. Update/Insert data profil mahasiswa (Upsert)
+        mysqli_query($conn, "INSERT INTO mahasiswa (npp, nama_mahasiswa, fakultas, jurusan) 
+                            VALUES ('$npp', '$nama', '$fakultas', '$jurusan')
+                            ON DUPLICATE KEY UPDATE nama_mahasiswa='$nama', fakultas='$fakultas', jurusan='$jurusan'");
+
+        if ($mode == 'update') {
+            // B. LOGIKA UPDATE
+            $id_pendaftaran = intval($_POST['id_pendaftaran']);
+            $sql_update = "UPDATE pemantauan_webinar SET motivasi = '$motivasi'";
+            if (!empty($bukti_bayar)) {
+                $sql_update .= ", bukti_bayar = '$bukti_bayar'";
+            }
+            $sql_update .= " WHERE id_pendaftaran = $id_pendaftaran";
+            $exec = mysqli_query($conn, $sql_update);
+            $msg = "Perubahan pendaftaran berhasil disimpan!";
+        } else {
+            // C. LOGIKA INSERT BARU
+            $exec = mysqli_query($conn, "INSERT INTO pemantauan_webinar (id_webinar, npp, motivasi, status_pendaftaran, bukti_bayar) 
+                                         VALUES ($id, '$npp', '$motivasi', 'menunggu', '$bukti_bayar')");
+            $msg = "Pendaftaran berhasil! Tunggu verifikasi admin.";
         }
 
-        // 3. Eksekusi Simpan Jika Upload OK
-        if ($upload_ok) {
-            // Update/Insert data mahasiswa
-            mysqli_query($conn, "INSERT INTO mahasiswa (npp, nama_mahasiswa, fakultas, jurusan) 
-                                VALUES ('$npp', '$nama', '$fakultas', '$jurusan')
-                                ON DUPLICATE KEY UPDATE nama_mahasiswa='$nama', fakultas='$fakultas', jurusan='$jurusan'");
-
-            // Simpan pendaftaran ke pemantauan
-            $ins = mysqli_query($conn, "INSERT INTO pemantauan_webinar (id_webinar, npp, motivasi, status_pendaftaran, bukti_bayar) 
-                                        VALUES ($id, '$npp', '$motivasi', 'menunggu', '$bukti_bayar')");
-            if ($ins) {
-                $_SESSION['success'] = "Pendaftaran berhasil! Tunggu verifikasi admin.";
-                header("Location: detail-webinar.php?id=$id");
-                exit();
-            } else {
-                $_SESSION['error'] = "Gagal menyimpan pendaftaran ke database.";
-            }
+        if ($exec) {
+            $_SESSION['success'] = $msg;
+            header("Location: riwayat.php"); 
+            exit();
+        } else {
+            $_SESSION['error'] = "Terjadi kesalahan database: " . mysqli_error($conn);
         }
     }
 }
@@ -238,29 +279,35 @@ require_once 'includes/header.php';
         </div>
 
         <form method="POST" enctype="multipart/form-data" class="space-y-6">
+            <input type="hidden" name="mode" value="<?= $is_edit_mode ? 'update' : 'insert' ?>">
+                <?php if($is_edit_mode): ?>
+                    <input type="hidden" name="id_pendaftaran" value="<?= $data_lama['id_pendaftaran'] ?>">
+                <?php endif; ?>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-2">
                     <label class="text-sm font-black text-slate-700 uppercase ml-1">NIM / NPP <span class="text-rose-500">*</span></label>
-                    <input type="text" name="npp" required placeholder="Contoh: 2021110045"
-                           class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 transition-all outline-none">
+                    <input type="text" name="npp" required placeholder="Contoh: 2021110045" value="<?= $is_edit_mode ? htmlspecialchars($data_lama['npp']) : '' ?>"
+                           class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 transition-all outline-none"<?= $is_edit_mode ? 'readonly' : '' ?>>
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-black text-slate-700 uppercase ml-1">Nama Lengkap <span class="text-rose-500">*</span></label>
                     <input type="text" name="nama" required placeholder="Nama Lengkap Anda"
+                            value="<?= htmlspecialchars($data_lama['nama_mahasiswa']) ?>"
                            class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 transition-all outline-none">
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-black text-slate-700 uppercase ml-1">Fakultas <span class="text-rose-500">*</span></label>
                     <select name="fakultas" required class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 transition-all outline-none appearance-none font-medium text-slate-600">
-                        <option value="" disable selected hidden>Pilih Fakultas</option>
-                        <option value="Teknik">Teknik</option>
-                        <option value="Ekonomi">Ekonomi</option>
-                        <option value="Ilmu Komputer">Ilmu Komputer</option>
+                        <option value="" disabled <?= !$is_edit_mode ? 'selected' : '' ?> hidden>Pilih Fakultas</option>
+                        <option value="Teknik" <?= $data_lama['fakultas'] == 'Teknik' ? 'selected' : '' ?>>Teknik</option>
+                        <option value="Ekonomi" <?= $data_lama['fakultas'] == 'Ekonomi' ? 'selected' : '' ?>>Ekonomi</option>
+                        <option value="Ilmu Komputer" <?= $data_lama['fakultas'] == 'Ilmu Komputer' ? 'selected' : '' ?>>Ilmu Komputer</option>
                         </select>
                 </div>
                 <div class="space-y-2">
                     <label class="text-sm font-black text-slate-700 uppercase ml-1">Program Studi <span class="text-rose-500">*</span></label>
                     <input type="text" name="jurusan" required placeholder="Contoh: Teknik Informatika"
+                            value="<?= htmlspecialchars($data_lama['jurusan']) ?>"
                            class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 transition-all outline-none">
                 </div>
             </div>
@@ -268,22 +315,22 @@ require_once 'includes/header.php';
             <div class="space-y-2">
                 <label class="text-sm font-black text-slate-700 uppercase ml-1">Motivasi Mengikuti <span class="text-rose-500">*</span></label>
                 <textarea name="motivasi" rows="4" required placeholder="Jelaskan alasan Anda mengikuti webinar ini..."
-                          class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 transition-all outline-none"></textarea>
+                          class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 transition-all outline-none"><?= $is_edit_mode ? htmlspecialchars($data_lama['motivasi']) : '' ?></textarea>
             </div>
-            <?php if($webinar['tipe_webinar'] == 'berbayar'): ?>
-            <div class="bg-amber-50 p-6 rounded-[2rem] border border-amber-200 mb-6 text-center">
-                <h4 class="font-black text-amber-800 uppercase text-sm tracking-widest mb-4">Instruksi Pembayaran</h4>
-                
-                <div class="bg-white p-4 inline-block rounded-2xl shadow-sm mb-4">
-                    <img src="../assets/img/qr/<?= $webinar['qr_code'] ?>" alt="QR Code Bayar" class="w-48 h-48 object-contain">
-                </div>
-                
-                <p class="text-slate-600 font-bold mb-4">Total Tagihan: <span class="text-teal-600 text-xl">Rp <?= number_format($webinar['biaya']) ?></span></p>
-                
-                <div class="text-left">
-                    <label class="block font-black text-slate-700 text-xs uppercase mb-2">Upload Bukti Transfer (Screenshot)</label>
-                    <input type="file" name="bukti_bayar" required class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-600 file:text-white hover:file:bg-teal-700">
-                </div>
+                <?php if($webinar['tipe_webinar'] == 'berbayar'): ?>
+                <div class="bg-amber-50 p-6 rounded-[2rem] border border-amber-200 mb-6 text-center">
+                    <h4 class="font-black text-amber-800 uppercase text-sm tracking-widest mb-4">Instruksi Pembayaran</h4>
+                    
+                    <div class="bg-white p-4 inline-block rounded-2xl shadow-sm mb-4">
+                        <img src="../assets/img/qr/<?= $webinar['qr_code'] ?>" alt="QR Code Bayar" class="w-48 h-48 object-contain">
+                    </div>
+                    
+                    <p class="text-slate-600 font-bold mb-4">Total Tagihan: <span class="text-teal-600 text-xl">Rp <?= number_format($webinar['biaya']) ?></span></p>
+                    
+                    <div class="text-left">
+                        <label class="block font-black text-slate-700 text-xs uppercase mb-2">Upload Bukti Transfer (Screenshot)</label>
+                        <input type="file" name="bukti_bayar" required class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-600 file:text-white hover:file:bg-teal-700">
+                    </div>
                 <!-- <input type="file" name="bukti_bayar" accept="image/*" required 
                 onchange="validateFile(this)"
                 class="w-full p-3 bg-white rounded-xl border border-amber-200"> -->

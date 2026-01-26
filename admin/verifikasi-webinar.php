@@ -109,19 +109,19 @@ $result_webinars = mysqli_stmt_get_result($stmt);
 
                         <div class="flex lg:flex-col gap-3 justify-center lg:border-l lg:border-slate-100 lg:pl-8">
                             <?php if($status == 'menunggu'): ?>
-                                <form method="POST" action="proses-aksi.php" class="contents">
+                                <form id="form-approve-<?= $webinar['id_webinar'] ?>" method="POST" action="proses-aksi.php" class="contents">
                                     <input type="hidden" name="id" value="<?= $webinar['id_webinar'] ?>">
                                     <input type="hidden" name="action" value="approve_webinar">
-                                    <button type="submit" onclick="return confirm('Setujui penayangan webinar ini?')" 
+                                    <button type="button" onclick="confirmAction('approve', <?= $webinar['id_webinar'] ?>)" 
                                             class="flex-1 lg:w-40 py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl font-bold transition-all shadow-lg shadow-emerald-200 flex items-center justify-center gap-2">
                                         <i class="fas fa-check"></i> Setujui
                                     </button>
                                 </form>
-                                
-                                <form method="POST" action="proses-aksi.php" class="contents">
+
+                                <form id="form-reject-<?= $webinar['id_webinar'] ?>" method="POST" action="proses-aksi.php" class="contents">
                                     <input type="hidden" name="id" value="<?= $webinar['id_webinar'] ?>">
                                     <input type="hidden" name="action" value="reject_webinar">
-                                    <button type="submit" onclick="return confirm('Tolak pengajuan ini?')"
+                                    <button type="button" onclick="confirmAction('reject', <?= $webinar['id_webinar'] ?>)"
                                             class="flex-1 lg:w-40 py-4 bg-white border-2 border-slate-100 text-rose-500 hover:bg-rose-50 rounded-2xl font-bold transition-all flex items-center justify-center gap-2">
                                         <i class="fas fa-times"></i> Tolak
                                     </button>
@@ -162,5 +162,45 @@ function viewWebinar(id) {
     window.location.href = 'detail-webinar.php?id=' + id;
 }
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+function confirmAction(type, id) {
+    const isApprove = type === 'approve';
+    
+    Swal.fire({
+        title: isApprove ? 'Setujui Webinar?' : 'Tolak Webinar?',
+        text: isApprove ? 'Webinar akan segera dipublikasikan dan dapat dilihat oleh mahasiswa.' : 'Pengajuan webinar ini akan ditolak dan dikembalikan ke draft.',
+        icon: isApprove ? 'success' : 'warning',
+        showCancelButton: true,
+        confirmButtonColor: isApprove ? '#10b981' : '#f43f5e',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: isApprove ? 'Ya, Publikasikan!' : 'Ya, Tolak!',
+        cancelButtonText: 'Batal',
+        borderRadius: '1.5rem',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Submit form secara manual berdasarkan ID
+            const formId = isApprove ? 'form-approve-' + id : 'form-reject-' + id;
+            document.getElementById(formId).submit();
+        }
+    });
+}
+</script>
+
+<?php if(isset($_SESSION['success'])): ?>
+<script>
+    Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: '<?= $_SESSION['success'] ?>',
+        timer: 2000,
+        showConfirmButton: false,
+        borderRadius: '1.5rem'
+    });
+</script>
+<?php unset($_SESSION['success']); endif; ?>
 
 <?php require_once '../includes/footer.php'; ?>

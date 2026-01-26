@@ -56,11 +56,11 @@ $count_rejected = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as tot
             </div>
         </div>
 
-        <?php if(isset($_SESSION['success'])): ?>
+        <!-- <?php if(isset($_SESSION['success'])): ?>
             <div class="mb-6 p-4 bg-teal-50 border-l-4 border-teal-500 text-teal-700 rounded-r-xl flex items-center gap-3 animate-pulse">
                 <i class="fas fa-check-circle"></i> <?= $_SESSION['success']; unset($_SESSION['success']); ?>
             </div>
-        <?php endif; ?>
+        <?php endif; ?> -->
 
         <div class="space-y-4">
             <?php if(mysqli_num_rows($result) > 0): ?>
@@ -134,22 +134,66 @@ $count_rejected = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as tot
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<?php if(isset($_SESSION['success'])): ?>
+<script>
+    Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: '<?= $_SESSION['success'] ?>',
+        timer: 2000,
+        showConfirmButton: false,
+        borderRadius: '1.5rem'
+    });
+</script>
+<?php unset($_SESSION['success']); ?>
+<?php endif; ?>
+
 <script>
 function viewImage(path) {
     document.getElementById('imgSource').src = path;
     document.getElementById('modalPreview').classList.remove('hidden');
 }
 
+// Notifikasi untuk Setujui
 function approveRegistration(id) {
-    if (confirm('Konfirmasi Setujui: Berikan akses webinar kepada mahasiswa ini?')) {
-        window.location.href = 'proses-aksi.php?action=approve_registration&id=' + id;
-    }
+    Swal.fire({
+        title: 'Setujui Pendaftaran?',
+        text: "Mahasiswa akan mendapatkan akses penuh ke webinar ini.",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#0d9488', // Teal 600
+        cancelButtonColor: '#64748b', // Slate 500
+        confirmButtonText: 'Ya, Setujui!',
+        cancelButtonText: 'Batal',
+        borderRadius: '1.5rem',
+        reverseButtons: true // Tombol 'Ya' akan pindah ke KANAN
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = 'proses-aksi.php?action=approve_registration&id=' + id;
+        }
+    })
 }
 
+// Notifikasi untuk Tolak
 function rejectRegistration(id) {
-    if (confirm('Konfirmasi Tolak: Mahasiswa ini tidak akan bisa mengikuti webinar?')) {
-        window.location.href = 'proses-aksi.php?action=reject_registration&id=' + id;
-    }
+    Swal.fire({
+        title: 'Tolak Pendaftaran?',
+        text: "Alasan penolakan akan membuat mahasiswa tidak bisa mengikuti webinar.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e11d48', // Rose 600
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Tolak!',
+        cancelButtonText: 'Batal',
+        borderRadius: '1.5rem',
+        reverseButtons: false // Tombol 'Ya' akan pindah ke KANAN
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = 'proses-aksi.php?action=reject_registration&id=' + id;
+        }
+    })
 }
 </script>
 

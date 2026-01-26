@@ -74,6 +74,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['btn_daftar'])) {
     // 2. Logika upload jika berbayar
     if ($upload_ok && $webinar['tipe_webinar'] == 'berbayar') {
         if (isset($_FILES['bukti_bayar']) && $_FILES['bukti_bayar']['error'] == 0) {
+
+            $max_size = 2 * 1024 * 1024; // 2MB
+            if ($_FILES['bukti_bayar']['size'] > $max_size) {
+                $upload_ok = false;
+                $_SESSION['error'] = "Ukuran file terlalu besar! Maksimal 2MB.";
+            }
+
             $target_dir = "../assets/img/qr/";
             if (!is_dir($target_dir)) mkdir($target_dir, 0777, true);
             

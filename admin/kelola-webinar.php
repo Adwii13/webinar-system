@@ -16,11 +16,11 @@ $result = mysqli_query($conn, $query);
 <div class="p-8 bg-slate-50 min-h-screen">
     <?php if (isset($_SESSION['success']) || isset($_SESSION['error'])): ?>
         <div id="alert-box" class="mb-6 flex items-center p-4 rounded-2xl shadow-lg border <?= isset($_SESSION['success']) ? 'bg-emerald-50 border-emerald-100 text-emerald-800' : 'bg-red-50 border-red-100 text-red-800' ?> animate-bounce-short">
-            <i class="fas <?= isset($_SESSION['success']) ? 'fa-check-circle' : 'fa-exclamation-circle' ?> mr-3 text-xl"></i>
+            <!-- <i class="fas <?= isset($_SESSION['success']) ? 'fa-check-circle' : 'fa-exclamation-circle' ?> mr-3 text-xl"></i>
             <span class="font-bold"><?= $_SESSION['success'] ?? $_SESSION['error'] ?></span>
             <button onclick="document.getElementById('alert-box').remove()" class="ml-auto bg-white/50 hover:bg-white p-1 rounded-lg transition-all">
                 <i class="fas fa-times"></i>
-            </button>
+            </button> -->
         </div>
         <?php unset($_SESSION['success']); unset($_SESSION['error']); ?>
     <?php endif; ?>
@@ -39,9 +39,6 @@ $result = mysqli_query($conn, $query);
     <div class="bg-white rounded-[32px] p-8 shadow-sm border border-slate-100 mb-8">
         <h3 class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Aksi Cepat</h3>
         <div class="flex flex-wrap gap-4">
-            <button onclick="exportReport('pdf')" class="flex items-center gap-3 px-5 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-all border border-slate-200">
-                <i class="far fa-file-pdf text-red-500"></i> Export PDF
-            </button>
             <a href="verifikasi-pendaftaran.php" class="flex items-center gap-3 px-5 py-3 bg-teal-50 text-teal-700 rounded-xl font-bold hover:bg-teal-100 transition-all border border-teal-100">
                 <i class="fas fa-user-check"></i> Verifikasi Pendaftaran
             </a>
@@ -137,10 +134,10 @@ $result = mysqli_query($conn, $query);
                                     <a href="tambah-webinar.php?edit=<?= $webinar['id_webinar'] ?>" class="p-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl hover:bg-slate-50 hover:text-amber-600 transition-all shadow-sm">
                                         <i class="far fa-edit"></i>
                                     </a>
-                                    <form method="POST" action="proses-aksi.php" onsubmit="return confirm('Hapus permanen webinar ini?')" class="inline">
+                                    <form method="POST" action="proses-aksi.php" onsubmit="confirmDelete(event, this)" class="inline">
                                         <input type="hidden" name="id" value="<?= $webinar['id_webinar'] ?>">
                                         <input type="hidden" name="action" value="delete_webinar">
-                                        <button class="p-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl hover:bg-red-50 hover:text-red-600 transition-all shadow-sm">
+                                        <button type="submit" class="p-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl hover:bg-red-50 hover:text-red-600 transition-all shadow-sm">
                                             <i class="far fa-trash-alt"></i>
                                         </button>
                                     </form>
@@ -188,6 +185,59 @@ function exportReport(type) {
     showToast(`Menyiapkan data ${type.toUpperCase()}...`, 'success');
 }
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+function confirmDelete(event, form) {
+    // 1. Berhentikan pengiriman form otomatis
+    event.preventDefault();
+
+    Swal.fire({
+        title: 'Hapus Webinar?',
+        text: "Data yang dihapus tidak dapat dikembalikan!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33', // Warna merah untuk hapus
+        cancelButtonColor: '#64748b', // Warna slate untuk batal
+        confirmButtonText: 'Ya, Hapus!',
+        cancelButtonText: 'Batalkan',
+        reverseButtons: true, // Tukar posisi tombol agar 'Ya' di kanan
+        borderRadius: '1rem'
+    }).then((result) => {
+        // 2. Jika user menekan tombol 'Ya'
+        if (result.isConfirmed) {
+            form.submit(); // Kirim form secara manual
+        }
+    });
+}
+</script>
+
+<!-- <?php if(isset($_SESSION['success'])): ?>
+<script>
+    Swal.fire({
+        icon: 'success',
+        title: 'Berhasil!',
+        text: '<?= $_SESSION['success'] ?>',
+        timer: 2500,
+        showConfirmButton: false,
+        borderRadius: '1rem'
+    });
+</script>
+<?php unset($_SESSION['success']); ?>
+<?php endif; ?>
+
+<?php if(isset($_SESSION['error'])): ?>
+<script>
+    Swal.fire({
+        icon: 'error',
+        title: 'Gagal!',
+        text: '<?= $_SESSION['error'] ?>',
+        confirmButtonColor: '#f43f5e'
+    });
+</script>
+<?php unset($_SESSION['error']); ?>
+<?php endif; ?> -->
 
 <style>
 @keyframes slide-up {

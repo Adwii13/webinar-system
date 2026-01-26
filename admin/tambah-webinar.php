@@ -292,36 +292,53 @@ if ($is_edit && isset($_POST['id'])) {
                     </div>
                 </div>
 
-                <script>
-                // Logic Toggle Biaya & Required Status
-                document.querySelectorAll('input[name="tipe_webinar"]').forEach(radio => {
-                    radio.addEventListener('change', function() {
-                        const biayaField = document.getElementById('biaya_field');
-                        const biayaInput = document.getElementById('biaya_input');
-                        const qrInput = document.getElementById('qr_input');
-                        
-                        if(this.value === 'berbayar') {
-                            biayaField.style.display = 'block';
-                            biayaField.classList.add('animate-slide-down');
-                            
-                            // Tambah required saat berbayar
-                            biayaInput.setAttribute('required', 'required');
-                            <?php if(!$is_edit): ?>
-                            qrInput.setAttribute('required', 'required');
-                            <?php endif; ?>
-                        } else {
-                            biayaField.style.display = 'none';
-                            
-                            // Hapus required saat gratis agar form bisa disubmit
-                            biayaInput.removeAttribute('required');
-                            if (qrInput) qrInput.removeAttribute('required');
-                            
-                            // Reset nilai biaya ke 0
-                            biayaInput.value = 0;
-                        }
-                    });
-                });
-                </script>
+<script>
+function toggleBiaya() {
+    const tipe = document.querySelector('input[name="tipe_webinar"]:checked').value;
+    const biayaField = document.getElementById('biaya_field');
+    const biayaInput = document.getElementById('biaya_input');
+    const qrInput = document.getElementById('qr_input');
+
+    if (tipe === 'berbayar') {
+        biayaField.classList.remove('hidden');
+        biayaField.style.display = 'block';
+        biayaInput.setAttribute('required', 'required');
+        // Hanya wajibkan QR jika sedang tambah baru (bukan edit)
+        <?php if(!$is_edit): ?>
+        if (qrInput) qrInput.setAttribute('required', 'required');
+        <?php endif; ?>
+    } else {
+        biayaField.classList.add('hidden');
+        biayaField.style.display = 'none';
+        biayaInput.removeAttribute('required');
+        if (qrInput) qrInput.removeAttribute('required');
+        biayaInput.value = 0; // Reset harga ke 0 jika gratis
+    }
+}
+
+// Jalankan saat ada perubahan klik
+document.querySelectorAll('input[name="tipe_webinar"]').forEach(radio => {
+    radio.addEventListener('change', toggleBiaya);
+});
+
+// Jalankan sekali saat halaman dimuat (untuk mode edit)
+document.addEventListener('DOMContentLoaded', toggleBiaya);
+
+// Validasi Tanggal
+document.querySelector('form').addEventListener('submit', function(e) {
+    const startReg = new Date(document.querySelector('input[name="tanggal_mulai_pendaftaran"]').value);
+    const endReg = new Date(document.querySelector('input[name="tanggal_akhir_pendaftaran"]').value);
+    const eventDate = new Date(document.querySelector('input[name="tanggal"]').value);
+    
+    if (endReg <= startReg) {
+        e.preventDefault();
+        alert('❌ Error: Pendaftaran tidak bisa ditutup sebelum atau pada saat dibuka!');
+    } else if (eventDate < endReg) {
+        e.preventDefault();
+        alert('❌ Error: Hari pelaksanaan webinar tidak boleh mendahului penutupan pendaftaran!');
+    }
+});
+</script>
                             <label class="block text-sm font-bold text-slate-700 mb-2">Status Publikasi</label>
                             <select name="status" class="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-teal-500/10 focus:border-teal-500 outline-none">
                                 <option value="draft" <?= ($is_edit && $webinar_data['status'] == 'draft') ? 'selected' : ''; ?>>Simpan Sebagai Draft</option>

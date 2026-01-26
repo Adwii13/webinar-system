@@ -12,7 +12,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
         switch ($action) {
             // --- AKSI HAPUS WEBINAR ---
             case 'delete_webinar':
+
+                $check_participants = mysqli_query($conn, "SELECT id_pendaftaran FROM pemantauan_webinar WHERE id_webinar = $id");
                 // 1. Cari nama file QR dulu supaya tidak jadi sampah di folder
+                if (mysqli_num_rows($check_participants) > 0) {
+                    $_SESSION['error'] = "Webinar tidak bisa dihapus karena sudah memiliki peserta!";
+                    header("Location: kelola-webinar.php");
+                    exit();
+                }
+
+                // Hapus file QR jika ada
                 $q_file = mysqli_query($conn, "SELECT qr_code FROM webinar WHERE id_webinar = $id");
                 $data_w = mysqli_fetch_assoc($q_file);
                 if ($data_w && !empty($data_w['qr_code'])) {
@@ -20,13 +29,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
                     if (file_exists($path)) unlink($path);
                 }
 
-                // 2. Set query hapus
                 $query = "DELETE FROM webinar WHERE id_webinar = ?";
-                $redirect_to = 'kelola-webinar.php'; // Kembali ke daftar webinar
+                $redirect_to = 'kelola-webinar.php';
+                $success_msg = "Webinar berhasil dihapus selamanya!";
                 break;
 
             case 'approve_registration':
                 $query = "UPDATE pemantauan_webinar SET status_pendaftaran = 'disetujui' WHERE id_pendaftaran = ?";
+                $success_msg = "Pendaftaran mahasiswa disetujui!";
                 $redirect_to = 'verifikasi-pendaftaran.php';
                 break;
 
@@ -52,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['action'])) {
             mysqli_stmt_bind_param($stmt, 'i', $id);
             
             if (mysqli_stmt_execute($stmt)) {
-                $_SESSION['success'] = "Aksi berhasil diproses!";
+                $_SESSION['success'] = $success_msg ?? "Aksi berhasil diproses!";
             } else {
                 // Jika error, kemungkinan ada Foreign Key (webinar masih punya peserta)
                 $_SESSION['error'] = "Gagal memproses.";

@@ -177,13 +177,13 @@ if ($is_edit && isset($_POST['id'])) {
                     </div>
 
                     <div class="space-y-2">
-                        <label class="text-sm font-bold text-slate-700 ml-1">Link Grup WhatsApp (Opsional)</label>
+                        <label class="text-sm font-bold text-slate-700 ml-1">Link Grup WhatsApp</label>
                         <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-emerald-500">
                                 <i class="fa-brands fa-whatsapp"></i>
                             </div>
                             <input type="url" name="link_group" 
-                                placeholder="https://chat.whatsapp.com/..." 
+                                required placeholder="https://chat.whatsapp.com/..." 
                                 class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all outline-none text-sm">
                         </div>
                         <p class="text-[10px] text-slate-400 ml-1 leading-relaxed">
@@ -283,7 +283,7 @@ if ($is_edit && isset($_POST['id'])) {
                     </div>
 
                     <div class="p-4 bg-teal-50 rounded-2xl border border-dashed border-teal-200">
-                        <label class="block text-sm font-bold text-teal-800 mb-2">Upload QR Code Pembayaran (Dummy)</label>
+                        <label class="block text-sm font-bold text-teal-800 mb-2">Upload QR Code Pembayaran</label>
                         <input type="file" name="qr_code" id="qr_input" accept="image/*" <?= $is_edit ? '' : 'required' ?>
                             class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-600 file:text-white hover:file:bg-teal-700">
                         <?php if($is_edit && !empty($webinar_data['qr_code'])): ?>

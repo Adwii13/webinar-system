@@ -134,9 +134,10 @@ $result = mysqli_query($conn, $query);
                                     <a href="tambah-webinar.php?edit=<?= $webinar['id_webinar'] ?>" class="p-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl hover:bg-slate-50 hover:text-amber-600 transition-all shadow-sm">
                                         <i class="far fa-edit"></i>
                                     </a>
-                                    <form method="POST" action="proses-aksi.php" onsubmit="confirmDelete(event, this)" class="inline">
+                                    <form method="POST" action="proses-aksi.php" onsubmit="confirmDelete(event, this, <?= $count['jml'] ?>, '<?= $webinar['status'] ?>')" class="inline">
                                         <input type="hidden" name="id" value="<?= $webinar['id_webinar'] ?>">
                                         <input type="hidden" name="action" value="delete_webinar">
+                                        
                                         <button type="submit" class="p-2.5 bg-white border border-slate-200 text-slate-500 rounded-xl hover:bg-red-50 hover:text-red-600 transition-all shadow-sm">
                                             <i class="far fa-trash-alt"></i>
                                         </button>
@@ -189,31 +190,45 @@ function exportReport(type) {
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-function confirmDelete(event, form) {
-    // 1. Berhentikan pengiriman form otomatis
+function confirmDelete(event, form, jumlahPeserta, status) {
     event.preventDefault();
 
+    // LOGIKA BARU: 
+    // Jika (Publish atau Draft) DAN ada peserta -> BLOKIR
+    // Jika Closed -> BOLEH LANJUT (meskipun ada peserta)
+    
+    if (status !== 'closed' && jumlahPeserta > 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Hapus Dibatalkan',
+            html: `Webinar dengan status <b>${status.toUpperCase()}</b> yang sudah memiliki peserta tidak boleh dihapus.<br><br>Selesaikan atau tutup (Closed) webinar terlebih dahulu jika ingin menghapus histori.`,
+            confirmButtonColor: '#64748b',
+            borderRadius: '1rem'
+        });
+        return;
+    }
+
+    // Konfirmasi hapus untuk status 'closed' atau webinar tanpa peserta
     Swal.fire({
         title: 'Hapus Webinar?',
-        text: "Data yang dihapus tidak dapat dikembalikan!",
+        text: status === 'closed' ? "Webinar ini sudah ditutup. Menghapusnya akan menghapus seluruh data peserta di dalamnya!" : "Data yang dihapus tidak dapat dikembalikan!",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#d33', // Warna merah untuk hapus
-        cancelButtonColor: '#64748b', // Warna slate untuk batal
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#64748b',
         confirmButtonText: 'Ya, Hapus!',
         cancelButtonText: 'Batalkan',
-        reverseButtons: true, // Tukar posisi tombol agar 'Ya' di kanan
+        reverseButtons: true,
         borderRadius: '1rem'
     }).then((result) => {
-        // 2. Jika user menekan tombol 'Ya'
         if (result.isConfirmed) {
-            form.submit(); // Kirim form secara manual
+            form.submit();
         }
     });
 }
 </script>
 
-<!-- <?php if(isset($_SESSION['success'])): ?>
+<?php if(isset($_SESSION['success'])): ?>
 <script>
     Swal.fire({
         icon: 'success',
@@ -237,7 +252,7 @@ function confirmDelete(event, form) {
     });
 </script>
 <?php unset($_SESSION['error']); ?>
-<?php endif; ?> -->
+<?php endif; ?>
 
 <style>
 @keyframes slide-up {

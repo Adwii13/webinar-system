@@ -109,15 +109,15 @@ $result_webinars = mysqli_query($conn, $query_webinars);
                             "<?= $daftar['motivasi']; ?>"
                         </p>
                         <div class="flex gap-3">
-                            <button onclick="approve(<?= $daftar['id_pendaftaran']; ?>)" class="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-700 shadow-lg shadow-emerald-900/10 transition-all">
+                            <button onclick="approveRegistration(<?= $daftar['id_pendaftaran']; ?>)" class="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-700 shadow-lg shadow-emerald-900/10 transition-all">
                                 <i class="far fa-check-circle"></i> Setujui
                             </button>
-                            <button onclick="reject(<?= $daftar['id_pendaftaran']; ?>)" class="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-700 shadow-lg shadow-red-900/10 transition-all">
+                            <button onclick="rejectRegistration(<?= $daftar['id_pendaftaran']; ?>)" class="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-700 shadow-lg shadow-red-900/10 transition-all">
                                 <i class="far fa-times-circle"></i> Tolak
                             </button>
-                            <button class="px-4 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-all">
+                            <a href="detail-webinar.php?id=<?= $daftar['id_webinar']; ?>" class="px-4 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-all flex items-center justify-center">
                                 <i class="far fa-eye"></i>
-                            </button>
+                            </a>
                         </div>
                     </div>
                     <?php endwhile; ?>
@@ -148,7 +148,7 @@ $result_webinars = mysqli_query($conn, $query_webinars);
                         <div class="bg-amber-50 text-amber-700 text-[10px] font-bold p-2 rounded-lg flex items-center gap-2 mb-3">
                             <i class="far fa-clock"></i> 8 pendaftaran menunggu
                         </div>
-                        <a href="#" class="text-blue-600 text-xs font-bold hover:underline flex items-center justify-center">Lihat Detail →</a>
+                        <a href="detail-webinar.php?id=<?= $webinar['id_webinar']; ?>" class="text-blue-600 text-xs font-bold hover:underline flex items-center justify-center">Lihat Detail →</a>
                     </div>
                     <div class="h-px bg-slate-50 mx-2"></div>
                     <?php endwhile; ?>
@@ -183,15 +183,45 @@ $result_webinars = mysqli_query($conn, $query_webinars);
 </div>
 
 <script>
-function approve(id) {
-    if(confirm('Terima pendaftaran mahasiswa ini?')) {
-        window.location.href = 'proses-aksi.php?action=approve_registration&id=' + id;
-    }
+
+// Notifikasi untuk Setujui
+function approveRegistration(id) {
+    Swal.fire({
+        title: 'Setujui Pendaftaran?',
+        text: "Mahasiswa akan mendapatkan akses penuh ke webinar ini.",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#0d9488', // Teal 600
+        cancelButtonColor: '#64748b', // Slate 500
+        confirmButtonText: 'Ya, Setujui!',
+        cancelButtonText: 'Batal',
+        borderRadius: '1.5rem',
+        reverseButtons: true // Tombol 'Ya' akan pindah ke KANAN
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = 'proses-aksi.php?action=approve_registration&id=' + id;
+        }
+    })
 }
-function reject(id) {
-    if(confirm('Tolak pendaftaran mahasiswa ini?')) {
-        window.location.href = 'proses-aksi.php?action=reject_registration&id=' + id;
-    }
+
+// Notifikasi untuk Tolak
+function rejectRegistration(id) {
+    Swal.fire({
+        title: 'Tolak Pendaftaran?',
+        text: "Alasan penolakan akan membuat mahasiswa tidak bisa mengikuti webinar.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#e11d48', // Rose 600
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Ya, Tolak!',
+        cancelButtonText: 'Batal',
+        borderRadius: '1.5rem',
+        reverseButtons: true // Tombol 'Ya' akan pindah ke KANAN
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = 'proses-aksi.php?action=reject_registration&id=' + id;
+        }
+    })
 }
 </script>
 

@@ -58,6 +58,9 @@ if (session_status() === PHP_SESSION_NONE) {
                         </a>
                     <?php endforeach; ?>
 
+                    <a href="../logout.php" class="px-4 py-2 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-all">
+    <i class="fas fa-sign-out-alt mr-2"></i> Keluar
+</a>
                     <!-- <div class="pt-6 border-t border-teal-500/50 mt-6">
                         <a href="../admin/dashboard.php" class="flex items-center gap-3 px-4 py-3 rounded-xl text-teal-100 hover:bg-white hover:text-teal-600 transition-all font-bold border border-teal-400/30">
                             <i class="fas fa-user-shield w-5 text-sm"></i>

@@ -1,13 +1,20 @@
-<footer class="mt-auto py-6 px-8 border-t border-slate-200 bg-white shrink-0">
+<?php
+// admin/includes/footer.php
+?>
+        <footer class="mt-auto py-6 px-8 border-t border-slate-200 bg-white shrink-0">
             <div class="flex flex-col md:flex-row justify-between items-center gap-4">
                 <div class="text-slate-500 text-sm font-medium">
                     &copy; 2026 UNIBI - University Webinar System
                 </div>
-                </div>
+            </div>
         </footer>
+    </main> 
+</div> 
 
-    </main> </div> <script>
-// 1. Fungsi Buka-Tutup Sidebar Mobile
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+// 1. Logika Interaksi Sidebar Mobile Responsive
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('overlay');
@@ -16,10 +23,9 @@ function toggleSidebar() {
     overlay.classList.toggle('hidden');
 }
 
-// 2. Fungsi Dropdown Profil Keluar (Mahasiswa)
+// 2. Logika Toggle Dropdown Menu Profil Admin
 function toggleProfileDropdown(event) {
-    // Mencegah event bubbling agar tidak langsung ditutup oleh event listener document di bawah
-    event.stopPropagation(); 
+    event.stopPropagation(); // Menjaga event klik tidak bocor keluar ke penutup global
     
     const dropdown = document.getElementById('profileDropdown');
     const arrow = document.getElementById('profileArrow');
@@ -33,7 +39,7 @@ function toggleProfileDropdown(event) {
     }
 }
 
-// 3. Otomatis Tutup Dropdown saat pengguna mengklik di area mana saja luar profil
+// 3. Global Event Listener: Deteksi klik sembarang di luar elemen untuk menutup dropdown otomatis
 document.addEventListener('click', function() {
     const dropdown = document.getElementById('profileDropdown');
     const arrow = document.getElementById('profileArrow');
@@ -43,32 +49,10 @@ document.addEventListener('click', function() {
         arrow.style.transform = 'rotate(0deg)';
     }
 });
-
-// 4. Transisi halus saat halaman dimuat (sesuai script di header)
-window.addEventListener('load', function() {
-    document.body.classList.add('loaded');
-});
-
-// 5. Auto-hide notifikasi (Alert) jika ada
-setTimeout(() => {
-    const alerts = document.querySelectorAll('.bg-emerald-100, .bg-rose-100');
-    alerts.forEach(alert => {
-        alert.style.transition = 'opacity 0.5s ease';
-        alert.style.opacity = '0';
-        setTimeout(() => alert.remove(), 500);
-    });
-}, 4000);
-
-// Fungsi Switch View (Opsional jika ingin digunakan nanti)
-// function switchView() {
-//     if (confirm('Beralih ke Panel Admin?')) {
-//         window.location.href = '../admin/dashboard.php';
-//     }
-// }
 </script>
 
 <style>
-/* Animasi transisi naik ke atas saat menu popover keluar muncul */
+/* Animasi Fade In Menus saat Triggers diklik */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }

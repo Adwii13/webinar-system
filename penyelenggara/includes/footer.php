@@ -5,8 +5,9 @@
                 </div>
                 </div>
         </footer>
+    </main> </div> <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    </main> </div> <script>
+<script>
 // 1. Fungsi Buka-Tutup Sidebar Mobile
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
@@ -16,7 +17,7 @@ function toggleSidebar() {
     overlay.classList.toggle('hidden');
 }
 
-// 2. Fungsi Dropdown Profil Keluar (Mahasiswa)
+// 2. Fungsi Dropdown Profil Keluar (Penyelenggara)
 function toggleProfileDropdown(event) {
     // Mencegah event bubbling agar tidak langsung ditutup oleh event listener document di bawah
     event.stopPropagation(); 
@@ -44,25 +45,10 @@ document.addEventListener('click', function() {
     }
 });
 
-// 4. Transisi halus saat halaman dimuat (sesuai script di header)
-window.addEventListener('load', function() {
-    document.body.classList.add('loaded');
-});
-
-// 5. Auto-hide notifikasi (Alert) jika ada
-setTimeout(() => {
-    const alerts = document.querySelectorAll('.bg-emerald-100, .bg-rose-100');
-    alerts.forEach(alert => {
-        alert.style.transition = 'opacity 0.5s ease';
-        alert.style.opacity = '0';
-        setTimeout(() => alert.remove(), 500);
-    });
-}, 4000);
-
-// Fungsi Switch View (Opsional jika ingin digunakan nanti)
+// Fungsi Switch View (Opsional jika ingin diaktifkan nanti)
 // function switchView() {
-//     if (confirm('Beralih ke Panel Admin?')) {
-//         window.location.href = '../admin/dashboard.php';
+//     if (confirm('Switch ke Student View?')) {
+//         window.location.href = '../student/index.php';
 //     }
 // }
 </script>

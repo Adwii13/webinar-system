@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['nama'] = $mahasiswa['nama_mahasiswa'];
                 $_SESSION['jurusan'] = $mahasiswa['jurusan']; // Diperlukan untuk filter prodi kelak
                 $_SESSION['role'] = 'mahasiswa';
-                header("Location: peserta/dashboard.php");
+                header("Location: student/index.php");
                 exit();
             }
         }

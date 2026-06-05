@@ -1,173 +1,104 @@
 <?php
+require_once 'includes/guard-mahasiswa.php';
 require_once '../config/database.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Proteksi halaman student
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'mahasiswa') {
+    header('Location: ../index.php');
+    exit();
+}
+
+$session_npp = $_SESSION['npp'] ?? '';
+
+// Query mengambil riwayat pendaftaran mahasiswa ini
+$query = "SELECT p.*, w.judul, w.tanggal, w.waktu_mulai, w.tipe_webinar
+          FROM pemantauan_webinar p
+          JOIN webinar w ON p.id_webinar = w.id_webinar
+          WHERE p.npp = '$session_npp'
+          ORDER BY p.id_pendaftaran DESC";
+$result = mysqli_query($conn, $query);
+
 require_once 'includes/header.php';
-
-// LOGIKA BARU: Cek apakah ini mode EDIT
-$is_edit_mode = false;
-$data_lama = [];
-
-if (isset($_GET['edit_id'])) {
-    $id_edit = mysqli_real_escape_string($conn, $_GET['edit_id']);
-    
-    // Ambil data pendaftaran yang sudah ada
-    $query_lama = mysqli_query($conn, "SELECT * FROM pemantauan_webinar WHERE id_pendaftaran = '$id_edit'");
-    
-    if (mysqli_num_rows($query_lama) > 0) {
-        $is_edit_mode = true;
-        $data_lama = mysqli_fetch_assoc($query_lama);
-    }
-}
-
-// Ambil filter status dari URL jika ada
-$status_filter = isset($_GET['status']) ? mysqli_real_escape_string($conn, $_GET['status']) : '';
-
-$query_str = "SELECT p.*, w.judul, w.tanggal, w.pembicara, w.kategori, w.poin_skkm, w.platform, w.link_group
-              FROM pemantauan_webinar p 
-              JOIN webinar w ON p.id_webinar = w.id_webinar";
-
-if ($status_filter) {
-    $query_str .= " WHERE p.status_pendaftaran = '$status_filter'";
-}
-
-$query_str .= " ORDER BY p.tanggal_daftar DESC";
-$result = mysqli_query($conn, $query_str);
-
-// Statistik untuk Card Atas
-$stats_query = mysqli_query($conn, "SELECT 
-    COUNT(*) as total,
-    SUM(CASE WHEN status_pendaftaran = 'disetujui' THEN 1 ELSE 0 END) as approved,
-    SUM(CASE WHEN status_pendaftaran = 'menunggu' THEN 1 ELSE 0 END) as waiting
-    FROM pemantauan_webinar");
-$stats = mysqli_fetch_assoc($stats_query);
-
-$poin_query = mysqli_query($conn, "SELECT SUM(w.poin_skkm) as total_poin 
-               FROM pemantauan_webinar p 
-               JOIN webinar w ON p.id_webinar = w.id_webinar 
-               WHERE p.status_pendaftaran = 'disetujui'");
-$total_poin = mysqli_fetch_assoc($poin_query)['total_poin'] ?? 0;
 ?>
 
-<div class="p-4 md:p-8 bg-slate-50 min-h-screen">
-    <div class="max-w-6xl mx-auto">
-        
-        <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-            <div>
-                <h2 class="text-4xl font-black text-slate-800 tracking-tight italic uppercase">Riwayat Webinar</h2>
-                <p class="text-slate-500 font-medium mt-2">Pantau status pendaftaran dan perolehan poin SKKM Anda.</p>
-            </div>
-            
-            <div class="flex gap-4 overflow-x-auto pb-2 md:pb-0">
-                <div class="bg-white px-6 py-3 rounded-2xl border border-slate-200 shadow-sm shrink-0">
-                    <p class="text-[10px] font-black text-slate-400 uppercase">Total Poin</p>
-                    <p class="text-xl font-black text-teal-600"><?= $total_poin ?> <span class="text-xs">SKKM</span></p>
-                </div>
-                <div class="bg-white px-6 py-3 rounded-2xl border border-slate-200 shadow-sm shrink-0">
-                    <p class="text-[10px] font-black text-slate-400 uppercase">Webinar Diikuti</p>
-                    <p class="text-xl font-black text-slate-800"><?= $stats['approved'] ?></p>
-                </div>
-            </div>
-        </div>
+<div class="max-w-7xl mx-auto px-4 py-8">
+    <div class="mb-6">
+        <h1 class="text-3xl font-black text-slate-800 uppercase italic">Riwayat Pendaftaran</h1>
+        <p class="text-slate-500">Pantau status verifikasi pendaftaran webinar Anda di sini.</p>
+    </div>
 
-        <div class="flex gap-2 mb-8 overflow-x-auto pb-2">
-            <a href="riwayat.php" class="px-6 py-2 rounded-full font-bold text-sm transition-all <?= !$status_filter ? 'bg-slate-900 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300' ?>">Semua</a>
-            <a href="riwayat.php?status=disetujui" class="px-6 py-2 rounded-full font-bold text-sm transition-all <?= $status_filter == 'disetujui' ? 'bg-teal-600 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200 hover:border-teal-200' ?>">Disetujui</a>
-            <a href="riwayat.php?status=menunggu" class="px-6 py-2 rounded-full font-bold text-sm transition-all <?= $status_filter == 'menunggu' ? 'bg-amber-500 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200 hover:border-amber-200' ?>">Menunggu</a>
-            <a href="riwayat.php?status=ditolak" class="px-6 py-2 rounded-full font-bold text-sm transition-all <?= $status_filter == 'ditolak' ? 'bg-rose-500 text-white shadow-lg' : 'bg-white text-slate-500 border border-slate-200 hover:border-rose-200' ?>">Ditolak</a>
-        </div>
-
-        <?php if(isset($_SESSION['success'])): ?>
-            <div class="alert alert-success">
-                <?= $_SESSION['success']; unset($_SESSION['success']); ?>
-            </div>
-        <?php endif; ?>
-
-        <div class="grid gap-4">
-            <?php if(mysqli_num_rows($result) > 0): ?>
-                <?php while($p = mysqli_fetch_assoc($result)): 
-                    // Logika Warna Status
-                    $color = 'slate';
-                    $icon = 'clock';
-                    if($p['status_pendaftaran'] == 'disetujui') { $color = 'teal'; $icon = 'check-circle'; }
-                    elseif($p['status_pendaftaran'] == 'ditolak') { $color = 'rose'; $icon = 'times-circle'; }
-                    elseif($p['status_pendaftaran'] == 'menunggu') { $color = 'amber'; $icon = 'hourglass-half'; }
-                ?>
-                <div class="bg-white p-5 md:p-7 rounded-[2rem] border border-slate-200 hover:border-<?= $color ?>-300 transition-all shadow-sm group">
-                    <div class="flex flex-col md:flex-row justify-between gap-6">
-                        <div class="flex gap-6">
-                            <div class="hidden md:flex flex-col items-center justify-center w-16 bg-<?= $color ?>-50 rounded-2xl border border-<?= $color ?>-100 text-<?= $color ?>-600">
-                                <i class="fas fa-<?= $icon ?> text-xl"></i>
-                                <span class="text-[10px] font-black uppercase mt-1 tracking-tighter"><?= $p['poin_skkm'] ?> pts</span>
-                            </div>
-
-                            <div>
-                                <div class="flex items-center gap-3 mb-2">
-                                    <span class="px-3 py-0.5 bg-<?= $color ?>-50 text-<?= $color ?>-600 text-[10px] font-black uppercase rounded-full border border-<?= $color ?>-100">
-                                        <?= $p['status_pendaftaran'] ?>
+    <div class="bg-white rounded-[2rem] border border-slate-200 overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-900 text-white uppercase text-xs tracking-wider font-black">
+                        <th class="px-6 py-4">Webinar</th>
+                        <th class="px-6 py-4">Tanggal Pelaksanaan</th>
+                        <th class="px-6 py-4">Tipe</th>
+                        <th class="px-6 py-4">Status</th>
+                        <th class="px-6 py-4 text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-sm font-medium text-slate-600">
+                    <?php if (mysqli_num_rows($result) == 0): ?>
+                        <tr>
+                            <td colspan="5" class="px-6 py-10 text-center text-slate-400 italic">
+                                Anda belum pernah mendaftar webinar apa pun.
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+                    
+                    <?php while($row = mysqli_fetch_assoc($result)): ?>
+                        <tr class="hover:bg-slate-50/80 transition-colors">
+                            <td class="px-6 py-4 font-bold text-slate-800">
+                                <?= htmlspecialchars($row['judul']) ?>
+                            </td>
+                            <td class="px-6 py-4">
+                                <?= date('d M Y', strtotime($row['tanggal'])) ?> - <?= date('H:i', strtotime($row['waktu_mulai'])) ?> WIB
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="px-3 py-1 rounded-full text-xs font-black uppercase <?= $row['tipe_webinar'] == 'gratis' ? 'bg-teal-50 text-teal-600' : 'bg-rose-50 text-rose-600' ?>">
+                                    <?= $row['tipe_webinar'] ?>
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <?php if($row['status_pendaftaran'] == 'menunggu'): ?>
+                                    <span class="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-xs font-black uppercase border border-amber-100">
+                                        <i class="fas fa-clock mr-1"></i> Menunggu
                                     </span>
-                                    <span class="text-xs text-slate-400 font-medium italic">Daftar: <?= date('d M Y', strtotime($p['tanggal_daftar'])) ?></span>
-                                </div>
-                                <h4 class="text-xl font-black text-slate-800 leading-tight group-hover:text-<?= $color ?>-600 transition-colors">
-                                    <?= htmlspecialchars($p['judul']) ?>
-                                </h4>
-                                <div class="flex flex-wrap gap-x-5 gap-y-1 mt-3 text-sm text-slate-500 font-bold">
-                                    <span class="flex items-center gap-2"><i class="fas fa-user-tie text-teal-500"></i> <?= htmlspecialchars($p['pembicara']) ?></span>
-                                    <span class="flex items-center gap-2"><i class="fas fa-calendar text-teal-500"></i> <?= date('d F Y', strtotime($p['tanggal'])) ?></span>
-                                    <span class="flex items-center gap-2"><i class="fas fa-laptop text-teal-500"></i> <?= htmlspecialchars($p['platform']) ?></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center md:justify-end gap-3 border-t md:border-t-0 pt-4 md:pt-0">
-                            <?php 
-                                if($p['status_pendaftaran'] == 'menunggu') {
-                                    // Arahkan ke detail-webinar dengan mode daftar dan membawa ID pendaftaran yang akan diedit
-                                    $link_tujuan = "detail-webinar.php?id=" . $p['id_webinar'] . "&daftar=true&edit_id=" . $p['id_pendaftaran'];
-                                    $label_tombol = "Edit Pendaftaran";
-                                    $bg_color = "bg-amber-100 text-amber-700 hover:bg-amber-200";
-                                } else {
-                                // Jika disetujui atau ditolak, arahkan ke Ringkasan (Read Only)
-                                $link_tujuan = "ringkasan-pendaftaran.php?id=" . $p['id_pendaftaran'];
-                                $label_tombol = "Lihat Detail";
-                                $bg_color = "bg-slate-100 text-slate-700 hover:bg-slate-200";
-                            }
-                            ?>
-
-                            <a href="<?= $link_tujuan ?>" 
-                            class="flex-1 md:flex-none px-6 py-3 <?= $bg_color ?> rounded-xl font-black text-xs uppercase tracking-widest transition-all text-center">
-                                <?= $label_tombol ?>
-                            </a>
-
-                            <?php if($p['status_pendaftaran'] == 'disetujui'): ?>
-                                <?php if(!empty($p['link_group'])): ?>
-                                    <a href="<?= $p['link_group'] ?>" 
-                                    target="_blank"
-                                    class="flex-1 md:flex-none px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-black text-[10px] md:text-xs uppercase tracking-widest shadow-lg shadow-emerald-200 transition-all text-center flex items-center justify-center gap-2">
-                                        <i class="fab fa-whatsapp text-sm md:text-base"></i>
-                                        <span>Grup WhatsApp</span>
-                                    </a>
+                                <?php elseif($row['status_pendaftaran'] == 'disetujui'): ?>
+                                    <span class="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs font-black uppercase border border-emerald-100">
+                                        <i class="fas fa-check-circle mr-1"></i> Disetujui
+                                    </span>
                                 <?php else: ?>
-                                    <button disabled 
-                                            class="flex-1 md:flex-none px-6 py-3 bg-slate-200 text-slate-400 rounded-xl font-black text-[10px] md:text-xs uppercase tracking-widest cursor-not-allowed text-center">
-                                        Link Belum Tersedia
-                                    </button>
+                                    <span class="px-3 py-1 bg-rose-50 text-rose-600 rounded-full text-xs font-black uppercase border border-rose-100">
+                                        <i class="fas fa-times-circle mr-1"></i> Ditolak
+                                    </span>
                                 <?php endif; ?>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-                <?php endwhile; ?>
-            <?php else: ?>
-                <div class="bg-white rounded-[3rem] p-20 text-center border-2 border-dashed border-slate-200">
-                    <div class="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-200 text-4xl">
-                        <i class="fas fa-history"></i>
-                    </div>
-                    <h3 class="text-2xl font-black text-slate-800 uppercase italic">Belum Ada Riwayat</h3>
-                    <p class="text-slate-500 mt-2 max-w-xs mx-auto font-medium">Anda belum mendaftar ke webinar manapun saat ini.</p>
-                    <a href="daftar-webinar.php" class="inline-block mt-8 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest hover:bg-teal-600 transition-all shadow-xl">
-                        Cari Webinar Sekarang
-                    </a>
-                </div>
-            <?php endif; ?>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center justify-center gap-2">
+                                    <a href="ringkasan.php?id_pendaftaran=<?= $row['id_pendaftaran'] ?>" 
+                                       class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition-all text-xs flex items-center gap-1">
+                                        <i class="fas fa-file-alt"></i> Detail
+                                    </a>
+
+                                    <?php if($row['status_pendaftaran'] == 'menunggu'): ?>
+                                        <a href="detail-webinar.php?id=<?= $row['id_webinar'] ?>&edit_id=<?= $row['id_pendaftaran'] ?>" 
+                                           class="px-4 py-2 bg-teal-500 hover:bg-teal-600 text-white rounded-xl font-bold transition-all text-xs flex items-center gap-1 shadow-sm shadow-teal-500/10">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

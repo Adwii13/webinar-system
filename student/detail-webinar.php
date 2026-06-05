@@ -1,10 +1,6 @@
 <?php
+require_once 'includes/guard-mahasiswa.php';
 require_once '../config/database.php';
-
-// Pastikan session dimulai jika belum (biasanya di config, tapi untuk jaga-jaga)
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
 
 if (!isset($_GET['id'])) {
     header('Location: daftar-webinar.php');
@@ -13,19 +9,27 @@ if (!isset($_GET['id'])) {
 
 $id = intval($_GET['id']);
 
-// --- LOGIKA AMBIL DATA EDIT (TAMBAHKAN INI) ---
+// --- LOGIKA AMBIL DATA EDIT ATAU OTOMATIS DARI SESSION ---
 $is_edit_mode = false;
+
+// Ambil data profil dasar dari session login mahasiswa
+$session_npp      = $_SESSION['npp'] ?? '';
+$session_nama     = $_SESSION['nama'] ?? '';
+$session_fakultas = $_SESSION['fakultas'] ?? '';
+$session_jurusan  = $_SESSION['prodi'] ?? $_SESSION['jurusan'] ?? ''; // Menangani variasi key session prodi
+
+// Inisialisasi struktur data penampung input form
 $data_lama = [
-    'npp' => '',
-    'nama_mahasiswa' => '',
-    'fakultas' => '',
-    'jurusan' => '',
+    'npp' => $session_npp,
+    'nama_mahasiswa' => $session_nama,
+    'fakultas' => $session_fakultas,
+    'jurusan' => $session_jurusan,
     'motivasi' => ''
 ];
 
 if (isset($_GET['edit_id'])) {
     $id_edit = intval($_GET['edit_id']);
-    // Join dengan mahasiswa untuk ambil data profil lengkapnya
+    // Join dengan mahasiswa untuk ambil data profil pendaftaran lamanya
     $q_edit = mysqli_query($conn, "SELECT p.*, m.nama_mahasiswa, m.fakultas, m.jurusan 
                                    FROM pemantauan_webinar p 
                                    JOIN mahasiswa m ON p.npp = m.npp 
@@ -50,20 +54,43 @@ if (!$webinar) {
     exit();
 }
 
+// Hitung variabel waktu dan status pendaftaran untuk validasi awal
+$today = date('Y-m-d H:i:s');
+$is_open = ($today >= $webinar['tanggal_mulai_pendaftaran'] && $today <= $webinar['tanggal_akhir_pendaftaran']);
+$sisa_kuota = $webinar['kuota_peserta'] - $webinar['peserta_terdaftar'];
+$is_full = ($sisa_kuota <= 0);
+$persentase = ($webinar['kuota_peserta'] > 0) ? ($webinar['peserta_terdaftar'] / $webinar['kuota_peserta']) * 100 : 0;
+
 // --- PROSES LOGIKA PENDAFTARAN ---
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['btn_daftar'])) {
-    $npp = mysqli_real_escape_string($conn, $_POST['npp']);
-    $nama = mysqli_real_escape_string($conn, $_POST['nama']);
-    $fakultas = mysqli_real_escape_string($conn, $_POST['fakultas']);
-    $jurusan = mysqli_real_escape_string($conn, $_POST['jurusan']);
+    // PROTEKSI UTAMA: Ganti input POST data identitas dengan data murni dari $_SESSION 
+    // Hal ini untuk menghindari teknik bypass modifikasi 'inspect element' HTML oleh user nakal
+    $npp = mysqli_real_escape_string($conn, $session_npp);
+    $nama = mysqli_real_escape_string($conn, $session_nama);
+    $fakultas = mysqli_real_escape_string($conn, $session_fakultas);
+    $jurusan = mysqli_real_escape_string($conn, $session_jurusan);
+    
+    // Input yang memang boleh ditulis dinamis oleh mahasiswa
     $motivasi = mysqli_real_escape_string($conn, $_POST['motivasi']);
     $mode = $_POST['mode'];
 
     $upload_ok = true;
     $bukti_bayar = "";
 
+    // PROTEKSI BACKEND KEAMANAN WAKTU: Memblokir pendaftaran di luar tanggal resmi (kecuali mode update/edit)
+    if (!$is_open && $mode !== 'update') {
+        $_SESSION['error'] = "Pendaftaran gagal! Sesi pendaftaran webinar ini sedang tidak dibuka.";
+        $upload_ok = false;
+    }
+
+    // PROTEKSI BACKEND KAPASITAS: Memblokir jika ada user tembakan saat kuota penuh
+    if ($is_full && $mode !== 'update' && $upload_ok) {
+        $_SESSION['error'] = "Pendaftaran gagal! Kuota peserta untuk webinar ini sudah penuh.";
+        $upload_ok = false;
+    }
+
     // 1. Validasi: Jika bukan mode edit, cek apakah NPP sudah terdaftar di webinar ini
-    if ($mode !== 'update') {
+    if ($mode !== 'update' && $upload_ok) {
         $check = mysqli_query($conn, "SELECT id_pendaftaran FROM pemantauan_webinar WHERE id_webinar = $id AND npp = '$npp'");
         if (mysqli_num_rows($check) > 0) {
             $_SESSION['error'] = "Anda sudah terdaftar di webinar ini!";
@@ -110,8 +137,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['btn_daftar'])) {
     if ($upload_ok) {
         // A. Update/Insert data profil mahasiswa (Upsert)
         mysqli_query($conn, "INSERT INTO mahasiswa (npp, nama_mahasiswa, fakultas, jurusan) 
-                            VALUES ('$npp', '$nama', '$fakultas', '$jurusan')
-                            ON DUPLICATE KEY UPDATE nama_mahasiswa='$nama', fakultas='$fakultas', jurusan='$jurusan'");
+                             VALUES ('$npp', '$nama', '$fakultas', '$jurusan')
+                             ON DUPLICATE KEY UPDATE nama_mahasiswa='$nama', fakultas='$fakultas', jurusan='$jurusan'");
 
         if ($mode == 'update') {
             // B. LOGIKA UPDATE
@@ -121,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['btn_daftar'])) {
                 $sql_update .= ", bukti_bayar = '$bukti_bayar'";
             }
             $sql_update .= " WHERE id_pendaftaran = $id_pendaftaran";
-            $exec = mysqli_query($conn, $sql_update);
+            $exec = mysqli_query($conn, $sql_update); 
             $msg = "Perubahan pendaftaran berhasil disimpan!";
         } else {
             // C. LOGIKA INSERT BARU
@@ -140,16 +167,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['btn_daftar'])) {
     }
 }
 
-// Hitung variabel untuk UI
-$sisa_kuota = $webinar['kuota_peserta'] - $webinar['peserta_terdaftar'];
-$persentase = ($webinar['peserta_terdaftar'] / $webinar['kuota_peserta']) * 100;
-$today = date('Y-m-d H:i:s');
-$is_open = ($today >= $webinar['tanggal_mulai_pendaftaran'] && $today <= $webinar['tanggal_akhir_pendaftaran']);
-$is_full = ($sisa_kuota <= 0);
-
 require_once 'includes/header.php';
-
 ?>
+
 <div class="max-w-7xl mx-auto px-4">
     <?php if(isset($_SESSION['success'])): ?>
         <div class="bg-emerald-100 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl mb-6 flex justify-between items-center">
@@ -175,7 +195,6 @@ require_once 'includes/header.php';
     </a>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        
         <div class="lg:col-span-2 space-y-6">
             <div class="bg-white rounded-[2rem] p-8 border border-slate-200 shadow-sm">
                 <div class="flex flex-wrap gap-3 mb-6">
@@ -196,7 +215,10 @@ require_once 'includes/header.php';
                     </div>
                     <div>
                         <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Waktu</p>
-                        <p class="font-bold text-slate-700"><?= date('H:i', strtotime($webinar['waktu_mulai'])) ?> WIB</p>
+                        <p class="font-bold text-slate-700">
+                            <?= date('H:i', strtotime($webinar['waktu_mulai'] ?? '00:00:00')) ?> - 
+                            <?= date('H:i', strtotime($webinar['waktu_selesai'] ?? '00:00:00')) ?> WIB
+                        </p>
                     </div>
                     <div>
                         <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">SKKM</p>
@@ -250,14 +272,14 @@ require_once 'includes/header.php';
                 <div class="bg-white/5 border border-white/10 rounded-2xl p-4 mb-8">
                     <p class="text-xs text-slate-400 mb-1 italic">Investasi Pelatihan:</p>
                     <p class="text-2xl font-black <?= $webinar['tipe_webinar'] == 'gratis' ? 'text-teal-400' : 'text-rose-400' ?>">
-                        <?= $webinar['tipe_webinar'] == 'gratis' ? 'GRATIS' : 'Rp '.number_format($webinar['biaya'], 0, ',', '.') ?>
+                        <?= $webinar['tipe_webinar'] == 'gratis' ? 'GRATIS' : 'Rp '.number_format($webinar['biaya'] ?? 0, 0, ',', '.') ?>
                     </p>
                 </div>
 
-                <?php if($is_open && !$is_full): ?>
+                <?php if(($is_open && !$is_full) || $is_edit_mode): ?>
                     <button onclick="document.getElementById('form-pendaftaran').scrollIntoView({behavior: 'smooth'})" 
                             class="w-full py-4 bg-teal-500 hover:bg-teal-400 text-white font-black rounded-xl transition-all shadow-lg shadow-teal-900/20 uppercase tracking-widest">
-                        Daftar Sekarang
+                        <?= $is_edit_mode ? 'Edit Pendaftaran Anda' : 'Daftar Sekarang' ?>
                     </button>
                 <?php else: ?>
                     <button disabled class="w-full py-4 bg-slate-800 text-slate-500 font-black rounded-xl cursor-not-allowed uppercase tracking-widest">
@@ -280,96 +302,116 @@ require_once 'includes/header.php';
     </div>
 
     <div id="form-pendaftaran" class="mt-12 bg-white rounded-[2.5rem] p-8 md:p-12 border border-slate-200 shadow-sm max-w-4xl mx-auto">
-        <div class="text-center mb-12">
-            <h2 class="text-3xl font-black text-slate-800 italic uppercase">Formulir Peserta</h2>
-            <p class="text-slate-500 font-medium">Pastikan data yang Anda masukkan sesuai dengan KTM (Kartu Tanda Mahasiswa)</p>
-        </div>
+        
+        <?php if (($is_open && !$is_full) || $is_edit_mode): ?>
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-black text-slate-800 italic uppercase"><?= $is_edit_mode ? 'Formulir Edit Peserta' : 'Formulir Peserta' ?></h2>
+                <p class="text-slate-500 font-medium">*Data identitas Anda terisi otomatis dari akun SIAKAD Anda dan terkunci.</p>
+            </div>
 
-        <form method="POST" enctype="multipart/form-data" class="space-y-6">
-            <input type="hidden" name="mode" value="<?= $is_edit_mode ? 'update' : 'insert' ?>">
+            <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                <input type="hidden" name="mode" value="<?= $is_edit_mode ? 'update' : 'insert' ?>">
                 <?php if($is_edit_mode): ?>
                     <input type="hidden" name="id_pendaftaran" value="<?= $data_lama['id_pendaftaran'] ?>">
                 <?php endif; ?>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="space-y-2">
-                    <label class="text-sm font-black text-slate-700 uppercase ml-1">NIM / NPP <span class="text-rose-500">*</span></label>
-                    <input type="text" name="npp" required placeholder="Contoh: 2021110045" value="<?= $is_edit_mode ? htmlspecialchars($data_lama['npp']) : '' ?>"
-                           class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 transition-all outline-none"<?= $is_edit_mode ? 'readonly' : '' ?>>
-                </div>
-                <div class="space-y-2">
-                    <label class="text-sm font-black text-slate-700 uppercase ml-1">Nama Lengkap <span class="text-rose-500">*</span></label>
-                    <input type="text" name="nama" required placeholder="Nama Lengkap Anda"
-                            value="<?= htmlspecialchars($data_lama['nama_mahasiswa']) ?>"
-                           class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 transition-all outline-none">
-                </div>
-                <div class="space-y-2">
-                    <label class="text-sm font-black text-slate-700 uppercase ml-1">Fakultas <span class="text-rose-500">*</span></label>
-                    <select name="fakultas" required class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 transition-all outline-none appearance-none font-medium text-slate-600">
-                        <option value="" disabled <?= !$is_edit_mode ? 'selected' : '' ?> hidden>Pilih Fakultas</option>
-                        <option value="Teknik" <?= $data_lama['fakultas'] == 'Teknik' ? 'selected' : '' ?>>Teknik</option>
-                        <option value="Ekonomi" <?= $data_lama['fakultas'] == 'Ekonomi' ? 'selected' : '' ?>>Ekonomi</option>
-                        <option value="Ilmu Komputer" <?= $data_lama['fakultas'] == 'Ilmu Komputer' ? 'selected' : '' ?>>Ilmu Komputer</option>
-                        </select>
-                </div>
-                <div class="space-y-2">
-                    <label class="text-sm font-black text-slate-700 uppercase ml-1">Program Studi <span class="text-rose-500">*</span></label>
-                    <input type="text" name="jurusan" required placeholder="Contoh: Teknik Informatika"
-                            value="<?= htmlspecialchars($data_lama['jurusan']) ?>"
-                           class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 transition-all outline-none">
-                </div>
-            </div>
 
-            <div class="space-y-2">
-                <label class="text-sm font-black text-slate-700 uppercase ml-1">Motivasi Mengikuti <span class="text-rose-500">*</span></label>
-                <textarea name="motivasi" rows="4" required placeholder="Jelaskan alasan Anda mengikuti webinar ini..."
-                          class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 transition-all outline-none"><?= $is_edit_mode ? htmlspecialchars($data_lama['motivasi']) : '' ?></textarea>
-            </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="text-sm font-black text-slate-700 uppercase ml-1">NIM / NPP <span class="text-slate-400 text-xs font-normal">(Sistem)</span></label>
+                        <input type="text" readonly value="<?= htmlspecialchars($data_lama['npp']) ?>"
+                               class="w-full px-5 py-4 bg-slate-100 border border-slate-200 text-slate-500 font-bold rounded-2xl outline-none cursor-not-allowed shadow-inner">
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-sm font-black text-slate-700 uppercase ml-1">Nama Lengkap <span class="text-slate-400 text-xs font-normal">(Sistem)</span></label>
+                        <input type="text" readonly value="<?= htmlspecialchars($data_lama['nama_mahasiswa']) ?>"
+                               class="w-full px-5 py-4 bg-slate-100 border border-slate-200 text-slate-500 font-bold rounded-2xl outline-none cursor-not-allowed shadow-inner">
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-sm font-black text-slate-700 uppercase ml-1">Fakultas <span class="text-slate-400 text-xs font-normal">(Sistem)</span></label>
+                        <input type="text" readonly value="<?= htmlspecialchars($data_lama['fakultas']) ?>"
+                               class="w-full px-5 py-4 bg-slate-100 border border-slate-200 text-slate-500 font-bold rounded-2xl outline-none cursor-not-allowed shadow-inner">
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-sm font-black text-slate-700 uppercase ml-1">Program Studi <span class="text-slate-400 text-xs font-normal">(Sistem)</span></label>
+                        <input type="text" readonly value="<?= htmlspecialchars($data_lama['jurusan']) ?>"
+                               class="w-full px-5 py-4 bg-slate-100 border border-slate-200 text-slate-500 font-bold rounded-2xl outline-none cursor-not-allowed shadow-inner">
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-sm font-black text-slate-700 uppercase ml-1">Motivasi Mengikuti <span class="text-rose-500">*</span></label>
+                    <textarea name="motivasi" rows="4" required placeholder="Jelaskan alasan Anda mengikuti webinar ini..."
+                              class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-teal-500 transition-all outline-none"><?= htmlspecialchars($data_lama['motivasi']) ?></textarea>
+                </div>
+
                 <?php if($webinar['tipe_webinar'] == 'berbayar'): ?>
-                <div class="bg-amber-50 p-6 rounded-[2rem] border border-amber-200 mb-6 text-center">
-                    <h4 class="font-black text-amber-800 uppercase text-sm tracking-widest mb-4">Instruksi Pembayaran</h4>
-                    
-                    <div class="bg-white p-4 inline-block rounded-2xl shadow-sm mb-4">
-                        <img src="../assets/img/qr/<?= $webinar['qr_code'] ?>" alt="QR Code Bayar" class="w-48 h-48 object-contain">
-                    </div>
-                    
-                    <p class="text-slate-600 font-bold mb-4">Total Tagihan: <span class="text-teal-600 text-xl">Rp <?= number_format($webinar['biaya']) ?></span></p>
-                    
-                    <div class="text-left">
-                        <label class="block font-black text-slate-700 text-xs uppercase mb-2">Upload Bukti Transfer (Screenshot)</label>
-                        <input type="file" name="bukti_bayar" required class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-600 file:text-white hover:file:bg-teal-700">
-                    </div>
-                <!-- <input type="file" name="bukti_bayar" accept="image/*" required 
-                onchange="validateFile(this)"
-                class="w-full p-3 bg-white rounded-xl border border-amber-200"> -->
+                    <div class="bg-amber-50 p-6 rounded-[2rem] border border-amber-200 mb-6 text-center">
+                        <h4 class="font-black text-amber-800 uppercase text-sm tracking-widest mb-4">Instruksi Pembayaran</h4>
+                        
+                        <div class="bg-white p-4 inline-block rounded-2xl shadow-sm mb-4">
+                            <img src="../assets/img/qr/<?= $webinar['qr_code'] ?>" alt="QR Code Bayar" class="w-48 h-48 object-contain">
+                        </div>
+                        
+                        <p class="text-slate-600 font-bold mb-4">Total Tagihan: <span class="text-teal-600 text-xl">Rp <?= number_format($webinar['biaya'] ?? 0) ?></span></p>
+                        
+                        <div class="text-left">
+                            <label class="block font-black text-slate-700 text-xs uppercase mb-2">Upload Bukti Transfer (Screenshot) <?= $is_edit_mode ? '<span class="text-slate-400 font-normal text-[11px]">(Kosongkan jika tidak ingin mengubah)</span>' : '<span class="text-rose-500">*</span>' ?></label>
+                            <input type="file" name="bukti_bayar" <?= $is_edit_mode ? '' : 'required' ?> onchange="validateFile(this)" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-teal-600 file:text-white hover:file:bg-teal-700">
+                        </div>
 
-                <script>
-                function validateFile(input) {
-                    const filePath = input.value;
-                    const allowedExtensions = /(\.jpg|\.jpeg|\.png)$/i;
-                    if (!allowedExtensions.exec(filePath)) {
-                        alert('Mohon upload file gambar (JPG/PNG)');
-                        input.value = '';
-                        return false;
-                    }
-                    if (input.files[0].size > 2000000) { // 2MB
-                        alert('Ukuran file terlalu besar (Maksimal 2MB)');
-                        input.value = '';
-                        return false;
-                    }
-                }
-                </script>
+                        <script>
+                        function validateFile(input) {
+                            const filePath = input.value;
+                            const allowedExtensions = /(\.jpg|\.jpeg|\.png)$/i;
+                            if (!allowedExtensions.exec(filePath)) {
+                                alert('Mohon upload file gambar (JPG/PNG)');
+                                input.value = '';
+                                return false;
+                            }
+                            if (input.files[0].size > 2000000) { 
+                                alert('Ukuran file terlalu besar (Maksimal 2MB)');
+                                input.value = '';
+                                return false;
+                            }
+                        }
+                        </script>
+                    </div>
+                <?php endif; ?>
+
+                <div class="pt-6">
+                    <button type="submit" name="btn_daftar" class="w-full py-5 bg-slate-900 text-white font-black rounded-2xl hover:bg-teal-600 transition-all shadow-xl shadow-slate-200 tracking-widest uppercase">
+                        <?= $is_edit_mode ? 'Simpan Perubahan Pendaftaran' : 'Kirim Pendaftaran Saya' ?>
+                    </button>
+                    <p class="text-center text-xs text-slate-400 mt-4 italic">
+                        <i class="fas fa-info-circle mr-1"></i> Data diverifikasi otomatis berdasarkan session login resmi platform.
+                    </p>
+                </div>
+            </form>
+
+        <?php else: ?>
+            <div class="text-center py-8">
+                <div class="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-rose-100">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h3 class="text-2xl font-black text-slate-800 tracking-tight mb-2">Formulir Terkunci</h3>
+                <p class="text-slate-500 max-w-md mx-auto text-sm leading-relaxed mb-6">
+                    <?php if($is_full): ?>
+                        Maaf, Anda tidak dapat melakukan pendaftaran baru karena kuota peserta pelatihan ini sudah terpenuhi (penuh).
+                    <?php else: ?>
+                        Maaf, Anda tidak dapat mengirimkan pendaftaran karena sesi pendaftaran webinar ini belum dimulai atau telah resmi ditutup oleh penyelenggara.
+                    <?php endif; ?>
+                </p>
+                <div class="inline-flex flex-wrap justify-center gap-4 text-xs font-bold bg-slate-50 px-4 py-2 rounded-full border border-slate-100 text-slate-600">
+                    <span><i class="fas fa-clock text-teal-500 mr-1"></i> Buka: <?= date('d M Y, H:i', strtotime($webinar['tanggal_mulai_pendaftaran'])) ?></span>
+                    <span class="text-slate-300">|</span>
+                    <span><i class="fas fa-calendar-times text-rose-500 mr-1"></i> Tutup: <?= date('d M Y, H:i', strtotime($webinar['tanggal_akhir_pendaftaran'])) ?></span>
+                </div>
             </div>
         <?php endif; ?>
 
-            <div class="pt-6">
-                <button type="submit" name="btn_daftar" class="w-full py-5 bg-slate-900 text-white font-black rounded-2xl hover:bg-teal-600 transition-all shadow-xl shadow-slate-200 tracking-widest uppercase">
-                    Kirim Pendaftaran Saya
-                </button>
-                <p class="text-center text-xs text-slate-400 mt-4 italic italic">
-                    <i class="fas fa-info-circle mr-1"></i> Data akan dikirimkan ke Admin UNIBI untuk proses verifikasi.
-                </p>
-            </div>
-        </form>
     </div>
 </div>
 
